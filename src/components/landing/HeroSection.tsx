@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play } from "lucide-react";
 import { ChatSimulation } from "./ChatSimulation";
+import { useNavigate } from "react-router-dom";
 
 export function HeroSection() {
+  const navigate = useNavigate();
+
   return (
     <section className="min-h-screen pt-24 pb-16 flex items-center relative overflow-hidden">
       {/* Background Effects */}
@@ -35,6 +38,7 @@ export function HeroSection() {
               <Button
                 size="lg"
                 className="bg-gold hover:bg-gold/90 text-black font-bold text-lg px-8 py-6 glow-gold animate-pulse-subtle group"
+                onClick={() => navigate("/auth")}
               >
                 Testar Grátis Agora
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
