@@ -8,8 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Play,
-  Pause,
   LayoutDashboard,
   Calendar,
   DollarSign,
@@ -430,7 +428,6 @@ const slides = [
 
 export const DemoTourModal = ({ open, onOpenChange }: DemoTourModalProps) => {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -549,13 +546,6 @@ export const DemoTourModal = ({ open, onOpenChange }: DemoTourModalProps) => {
     }
   }, [currentSlide, open, isMuted, playNarration]);
 
-  // Auto-play
-  useEffect(() => {
-    if (!isPlaying || !open) return;
-    
-    const interval = setInterval(nextSlide, 8000);
-    return () => clearInterval(interval);
-  }, [isPlaying, open, nextSlide]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -565,10 +555,6 @@ export const DemoTourModal = ({ open, onOpenChange }: DemoTourModalProps) => {
       if (e.key === "ArrowRight") nextSlide();
       if (e.key === "ArrowLeft") prevSlide();
       if (e.key === "Escape") onOpenChange(false);
-      if (e.key === " ") {
-        e.preventDefault();
-        setIsPlaying((prev) => !prev);
-      }
       if (e.key === "m" || e.key === "M") {
         setIsMuted((prev) => !prev);
       }
@@ -582,7 +568,6 @@ export const DemoTourModal = ({ open, onOpenChange }: DemoTourModalProps) => {
   useEffect(() => {
     if (open) {
       setCurrentSlide(0);
-      setIsPlaying(true);
     } else {
       // Stop audio when modal closes
       if (audioRef.current) {
@@ -645,15 +630,6 @@ export const DemoTourModal = ({ open, onOpenChange }: DemoTourModalProps) => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="text-muted-foreground hover:text-foreground"
-              title={isPlaying ? "Pausar (Espaço)" : "Play (Espaço)"}
-            >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
               onClick={() => onOpenChange(false)}
               className="text-muted-foreground hover:text-foreground"
               title="Fechar (ESC)"
@@ -689,10 +665,7 @@ export const DemoTourModal = ({ open, onOpenChange }: DemoTourModalProps) => {
               {slides.map((slide, index) => (
                 <button
                   key={slide.id}
-                  onClick={() => {
-                    setCurrentSlide(index);
-                    setIsPlaying(false);
-                  }}
+                  onClick={() => setCurrentSlide(index)}
                   className={`h-2 rounded-full transition-all duration-300 ${
                     index === currentSlide
                       ? "w-8 bg-primary"
@@ -720,23 +693,6 @@ export const DemoTourModal = ({ open, onOpenChange }: DemoTourModalProps) => {
           </div>
         </div>
 
-        {/* Progress Bar */}
-        {isPlaying && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted">
-            <div
-              className="h-full bg-primary transition-all duration-100"
-              style={{
-                animation: "progress 5s linear infinite",
-              }}
-            />
-            <style>{`
-              @keyframes progress {
-                from { width: 0%; }
-                to { width: 100%; }
-              }
-            `}</style>
-          </div>
-        )}
       </DialogContent>
     </Dialog>
   );
