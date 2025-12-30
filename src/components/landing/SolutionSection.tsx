@@ -102,8 +102,8 @@ export function SolutionSection() {
                   <Clock className="h-5 w-5 text-gold" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">&lt;3s</p>
-                  <p className="text-xs text-muted-foreground">Tempo de resposta</p>
+                  <p className="text-2xl font-bold text-foreground">~30s</p>
+                  <p className="text-xs text-muted-foreground">Resposta natural</p>
                 </div>
               </div>
             </div>
