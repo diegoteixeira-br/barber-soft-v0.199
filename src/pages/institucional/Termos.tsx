@@ -21,7 +21,7 @@ const Termos = () => {
       <article className="prose prose-gray dark:prose-invert max-w-none">
         <header className="not-prose mb-12">
           <h1 className="text-4xl font-bold mb-4">Termos de Uso</h1>
-          <p className="text-muted-foreground">Última atualização: 30 de dezembro de 2024</p>
+          <p className="text-muted-foreground">Última atualização: 30 de dezembro de 2025</p>
         </header>
 
         <section>
