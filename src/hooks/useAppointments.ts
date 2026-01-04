@@ -98,6 +98,7 @@ export function useAppointments(startDate?: Date, endDate?: Date, barberId?: str
           service:services(id, name, duration_minutes, price)
         `)
         .eq("unit_id", currentUnitId)
+        .neq("status", "cancelled")
         .order("start_time", { ascending: true });
 
       if (startDate) {
