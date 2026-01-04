@@ -6,6 +6,37 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
 };
 
+// Mapeamento de fusos horários brasileiros para offsets
+function getTimezoneOffset(timezone: string): string {
+  const offsets: Record<string, string> = {
+    'America/Sao_Paulo': '-03:00',
+    'America/Cuiaba': '-04:00',
+    'America/Manaus': '-04:00',
+    'America/Fortaleza': '-03:00',
+    'America/Recife': '-03:00',
+    'America/Belem': '-03:00',
+    'America/Rio_Branco': '-05:00',
+    'America/Noronha': '-02:00',
+    'America/Porto_Velho': '-04:00',
+    'America/Boa_Vista': '-04:00',
+  };
+  return offsets[timezone] || '-03:00'; // Default: Brasília
+}
+
+// Converte uma data local (sem timezone) para UTC baseado no timezone da unidade
+function convertLocalToUTC(dateTimeStr: string, timezone: string): Date {
+  // Se já tem timezone info (Z ou +/-), usar direto
+  if (dateTimeStr.includes('Z') || /[+-]\d{2}:\d{2}$/.test(dateTimeStr)) {
+    return new Date(dateTimeStr);
+  }
+  
+  // Caso contrário, interpretar como horário local da unidade
+  const offset = getTimezoneOffset(timezone);
+  const localDateTime = `${dateTimeStr}${offset}`;
+  console.log(`Converting local time: ${dateTimeStr} with offset ${offset} -> ${localDateTime}`);
+  return new Date(localDateTime);
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -269,6 +300,20 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
     );
   }
 
+  // Buscar timezone da unidade
+  const { data: unitData, error: unitTimezoneError } = await supabase
+    .from('units')
+    .select('timezone')
+    .eq('id', unit_id)
+    .single();
+
+  if (unitTimezoneError) {
+    console.error('Error fetching unit timezone:', unitTimezoneError);
+  }
+
+  const unitTimezone = unitData?.timezone || 'America/Sao_Paulo';
+  console.log(`Unit timezone: ${unitTimezone}`);
+
   console.log(`Creating appointment: ${clientName} with ${barberName} for ${serviceName} at ${dateTime}`);
   console.log(`Normalized phone: ${clientPhone}`);
   console.log(`Extra client data - birth_date: ${clientBirthDate}, notes: ${clientNotes}, tags: ${JSON.stringify(clientTags)}`);
@@ -455,9 +500,12 @@ async function handleCreate(supabase: any, body: any, corsHeaders: any) {
   const selectedService = services[0];
   console.log('Found service:', selectedService);
 
-  // Calcular end_time
-  const startTime = new Date(dateTime);
+  // Calcular end_time - converter para UTC baseado no timezone da unidade
+  const startTime = convertLocalToUTC(dateTime, unitTimezone);
   const endTime = new Date(startTime.getTime() + selectedService.duration_minutes * 60000);
+  
+  console.log(`Converted start_time: ${dateTime} -> ${startTime.toISOString()} (UTC)`);
+  console.log(`Calculated end_time: ${endTime.toISOString()} (UTC)`);
 
   // Verificar se o horário está disponível
   const { data: conflictingApts, error: conflictError } = await supabase

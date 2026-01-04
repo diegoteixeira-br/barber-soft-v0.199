@@ -17,11 +17,32 @@ import {
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Unit } from "@/hooks/useUnits";
 import { Separator } from "@/components/ui/separator";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Globe } from "lucide-react";
+
+// Fusos horários brasileiros
+const BRAZIL_TIMEZONES = [
+  { value: 'America/Sao_Paulo', label: 'Brasília/São Paulo (UTC-3)' },
+  { value: 'America/Cuiaba', label: 'Cuiabá/Campo Grande (UTC-4)' },
+  { value: 'America/Manaus', label: 'Manaus/Amazonas (UTC-4)' },
+  { value: 'America/Rio_Branco', label: 'Rio Branco/Acre (UTC-5)' },
+  { value: 'America/Recife', label: 'Recife/Nordeste (UTC-3)' },
+  { value: 'America/Belem', label: 'Belém/Pará (UTC-3)' },
+  { value: 'America/Fortaleza', label: 'Fortaleza/Ceará (UTC-3)' },
+  { value: 'America/Noronha', label: 'Fernando de Noronha (UTC-2)' },
+  { value: 'America/Porto_Velho', label: 'Porto Velho/Rondônia (UTC-4)' },
+  { value: 'America/Boa_Vista', label: 'Boa Vista/Roraima (UTC-4)' },
+];
 
 const formSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório").max(100, "Nome muito longo"),
@@ -33,6 +54,7 @@ const formSchema = z.object({
     .max(50, "Nome muito longo")
     .regex(/^[a-zA-Z0-9_-]*$/, "Use apenas letras, números, hífens e underscores")
     .optional(),
+  timezone: z.string().default('America/Sao_Paulo'),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -54,6 +76,7 @@ export function UnitFormModal({ open, onClose, onSubmit, unit, isLoading }: Unit
       phone: "",
       manager_name: "",
       evolution_instance_name: "",
+      timezone: "America/Sao_Paulo",
     },
   });
 
@@ -65,6 +88,7 @@ export function UnitFormModal({ open, onClose, onSubmit, unit, isLoading }: Unit
         phone: unit.phone || "",
         manager_name: unit.manager_name || "",
         evolution_instance_name: unit.evolution_instance_name || "",
+        timezone: unit.timezone || "America/Sao_Paulo",
       });
     } else {
       form.reset({
@@ -73,6 +97,7 @@ export function UnitFormModal({ open, onClose, onSubmit, unit, isLoading }: Unit
         phone: "",
         manager_name: "",
         evolution_instance_name: "",
+        timezone: "America/Sao_Paulo",
       });
     }
   }, [unit, form]);
@@ -84,6 +109,7 @@ export function UnitFormModal({ open, onClose, onSubmit, unit, isLoading }: Unit
       phone: data.phone || undefined,
       manager_name: data.manager_name || undefined,
       evolution_instance_name: data.evolution_instance_name?.toLowerCase().trim() || undefined,
+      timezone: data.timezone,
     });
   };
 
@@ -151,6 +177,43 @@ export function UnitFormModal({ open, onClose, onSubmit, unit, isLoading }: Unit
                 </FormItem>
               )}
             />
+
+            <Separator className="my-4" />
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Globe className="h-4 w-4" />
+                Configuração Regional
+              </div>
+
+              <FormField
+                control={form.control}
+                name="timezone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fuso Horário</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o fuso horário" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {BRAZIL_TIMEZONES.map((tz) => (
+                          <SelectItem key={tz.value} value={tz.value}>
+                            {tz.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Fuso horário para interpretação de agendamentos via WhatsApp.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <Separator className="my-4" />
 

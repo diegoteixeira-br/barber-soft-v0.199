@@ -580,6 +580,7 @@ export type Database = {
           manager_name: string | null
           name: string
           phone: string | null
+          timezone: string | null
           user_id: string
           whatsapp_name: string | null
           whatsapp_phone: string | null
@@ -596,6 +597,7 @@ export type Database = {
           manager_name?: string | null
           name: string
           phone?: string | null
+          timezone?: string | null
           user_id: string
           whatsapp_name?: string | null
           whatsapp_phone?: string | null
@@ -612,6 +614,7 @@ export type Database = {
           manager_name?: string | null
           name?: string
           phone?: string | null
+          timezone?: string | null
           user_id?: string
           whatsapp_name?: string | null
           whatsapp_phone?: string | null

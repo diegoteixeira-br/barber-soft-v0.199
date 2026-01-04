@@ -17,6 +17,7 @@ export interface Unit {
   whatsapp_name: string | null;
   whatsapp_phone: string | null;
   whatsapp_picture_url: string | null;
+  timezone: string | null;
 }
 
 interface UnitFormData {
@@ -26,6 +27,7 @@ interface UnitFormData {
   manager_name?: string;
   evolution_instance_name?: string;
   is_headquarters?: boolean;
+  timezone?: string;
 }
 
 export function useUnits(companyId: string | null = null) {
