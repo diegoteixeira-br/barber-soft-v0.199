@@ -235,12 +235,15 @@ serve(async (req) => {
             console.log('Delete orphaned instance error (non-critical):', e);
           }
 
-          // Clear database
+          // Clear database including profile data
           await supabase
             .from('units')
             .update({
               evolution_instance_name: null,
               evolution_api_key: null,
+              whatsapp_name: null,
+              whatsapp_phone: null,
+              whatsapp_picture_url: null,
             })
             .eq('id', unit.id);
 
@@ -249,6 +252,63 @@ serve(async (req) => {
             state: 'disconnected',
             cleaned: true,
             message: 'Instância expirada foi removida automaticamente'
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+
+        // If connected (state === 'open'), fetch profile information
+        if (state === 'open') {
+          let profileName = null;
+          let profilePhone = null;
+          let profilePicture = null;
+
+          // Get the instance owner number first
+          try {
+            const ownerRes = await fetch(
+              `${EVOLUTION_API_URL}/instance/fetchInstances?instanceName=${unit.evolution_instance_name}`,
+              {
+                method: 'GET',
+                headers: {
+                  'apikey': EVOLUTION_GLOBAL_KEY!,
+                },
+              }
+            );
+            const ownerData = await ownerRes.json();
+            console.log('Instance data:', JSON.stringify(ownerData));
+            
+            if (Array.isArray(ownerData) && ownerData.length > 0) {
+              const instance = ownerData[0];
+              profilePhone = instance.owner?.replace('@s.whatsapp.net', '') || null;
+              profileName = instance.profileName || null;
+              profilePicture = instance.profilePicUrl || null;
+            }
+          } catch (e) {
+            console.log('Fetch instance data error:', e);
+          }
+
+          // Save profile to database if we have data
+          if (profileName || profilePhone || profilePicture) {
+            console.log('Saving profile data:', { profileName, profilePhone, profilePicture });
+            await supabase
+              .from('units')
+              .update({
+                whatsapp_name: profileName,
+                whatsapp_phone: profilePhone,
+                whatsapp_picture_url: profilePicture,
+              })
+              .eq('id', unit.id);
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            state: 'open',
+            instanceName: unit.evolution_instance_name,
+            profile: {
+              name: profileName,
+              phone: profilePhone,
+              pictureUrl: profilePicture,
+            }
           }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
@@ -305,12 +365,15 @@ serve(async (req) => {
           console.log('Delete error (non-critical):', e);
         }
 
-        // Clear database
+        // Clear database including profile data
         const { error: updateError } = await supabase
           .from('units')
           .update({
             evolution_instance_name: null,
             evolution_api_key: null,
+            whatsapp_name: null,
+            whatsapp_phone: null,
+            whatsapp_picture_url: null,
           })
           .eq('id', unit.id);
 

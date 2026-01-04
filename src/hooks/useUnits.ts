@@ -14,6 +14,9 @@ export interface Unit {
   company_id: string | null;
   created_at: string;
   is_headquarters: boolean;
+  whatsapp_name: string | null;
+  whatsapp_phone: string | null;
+  whatsapp_picture_url: string | null;
 }
 
 interface UnitFormData {

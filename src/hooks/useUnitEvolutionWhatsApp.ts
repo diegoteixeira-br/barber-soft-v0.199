@@ -5,12 +5,19 @@ import { Unit } from "@/hooks/useUnits";
 
 export type ConnectionState = "disconnected" | "connecting" | "open" | "loading" | "error";
 
+export interface WhatsAppProfile {
+  name: string | null;
+  phone: string | null;
+  pictureUrl: string | null;
+}
+
 interface UseUnitEvolutionWhatsAppReturn {
   connectionState: ConnectionState;
   qrCode: string | null;
   pairingCode: string | null;
   isLoading: boolean;
   error: string | null;
+  profile: WhatsAppProfile | null;
   createInstance: () => Promise<void>;
   disconnect: () => Promise<void>;
   refreshQRCode: () => Promise<void>;
@@ -24,6 +31,7 @@ export function useUnitEvolutionWhatsApp(unit: Unit | null): UseUnitEvolutionWha
   const [pairingCode, setPairingCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [profile, setProfile] = useState<WhatsAppProfile | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const stopPolling = useCallback(() => {
@@ -59,6 +67,18 @@ export function useUnitEvolutionWhatsApp(unit: Unit | null): UseUnitEvolutionWha
           setQrCode(null);
           setPairingCode(null);
           stopPolling();
+          
+          // Set profile data from API response or unit data
+          if (data.profile) {
+            setProfile(data.profile);
+          } else if (unit?.whatsapp_name || unit?.whatsapp_phone || unit?.whatsapp_picture_url) {
+            setProfile({
+              name: unit.whatsapp_name,
+              phone: unit.whatsapp_phone,
+              pictureUrl: unit.whatsapp_picture_url,
+            });
+          }
+          
           toast({
             title: "WhatsApp conectado!",
             description: "Sua integração está funcionando.",
@@ -189,6 +209,7 @@ export function useUnitEvolutionWhatsApp(unit: Unit | null): UseUnitEvolutionWha
       setConnectionState("disconnected");
       setQrCode(null);
       setPairingCode(null);
+      setProfile(null);
 
       toast({
         title: "WhatsApp desconectado",
@@ -258,11 +279,20 @@ export function useUnitEvolutionWhatsApp(unit: Unit | null): UseUnitEvolutionWha
   // Check initial status on mount (with auto-refresh QR)
   useEffect(() => {
     if (unit?.evolution_instance_name) {
+      // Set initial profile from unit data if available
+      if (unit.whatsapp_name || unit.whatsapp_phone || unit.whatsapp_picture_url) {
+        setProfile({
+          name: unit.whatsapp_name,
+          phone: unit.whatsapp_phone,
+          pictureUrl: unit.whatsapp_picture_url,
+        });
+      }
       checkStatus(true);
     } else {
       setConnectionState("disconnected");
       setQrCode(null);
       setPairingCode(null);
+      setProfile(null);
     }
   }, [unit?.evolution_instance_name, checkStatus]);
 
@@ -279,6 +309,7 @@ export function useUnitEvolutionWhatsApp(unit: Unit | null): UseUnitEvolutionWha
     pairingCode,
     isLoading,
     error,
+    profile,
     createInstance,
     disconnect,
     refreshQRCode,

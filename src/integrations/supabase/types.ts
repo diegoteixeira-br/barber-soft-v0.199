@@ -581,6 +581,9 @@ export type Database = {
           name: string
           phone: string | null
           user_id: string
+          whatsapp_name: string | null
+          whatsapp_phone: string | null
+          whatsapp_picture_url: string | null
         }
         Insert: {
           address?: string | null
@@ -594,6 +597,9 @@ export type Database = {
           name: string
           phone?: string | null
           user_id: string
+          whatsapp_name?: string | null
+          whatsapp_phone?: string | null
+          whatsapp_picture_url?: string | null
         }
         Update: {
           address?: string | null
@@ -607,6 +613,9 @@ export type Database = {
           name?: string
           phone?: string | null
           user_id?: string
+          whatsapp_name?: string | null
+          whatsapp_phone?: string | null
+          whatsapp_picture_url?: string | null
         }
         Relationships: [
           {

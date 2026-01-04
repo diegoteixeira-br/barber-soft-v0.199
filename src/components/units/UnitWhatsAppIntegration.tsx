@@ -21,10 +21,22 @@ export const UnitWhatsAppIntegration = forwardRef<UnitWhatsAppIntegrationRef, Un
       qrCode,
       pairingCode,
       isLoading,
+      profile,
       createInstance,
       disconnect,
       refreshQRCode,
     } = useUnitEvolutionWhatsApp(unit);
+
+    // Format phone number for display
+    const formatPhone = (phone: string | null) => {
+      if (!phone) return null;
+      // Format as +55 65 99989-1722
+      const cleaned = phone.replace(/\D/g, '');
+      if (cleaned.length >= 12) {
+        return `+${cleaned.slice(0, 2)} ${cleaned.slice(2, 4)} ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`;
+      }
+      return `+${cleaned}`;
+    };
 
     // Expose cleanup method to parent via ref
     useImperativeHandle(ref, () => ({
@@ -176,23 +188,44 @@ export const UnitWhatsAppIntegration = forwardRef<UnitWhatsAppIntegrationRef, Un
         {/* Connected State */}
         {connectionState === "open" && (
           <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-6">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-foreground mb-1">
-                  WhatsApp conectado com sucesso!
+            <div className="flex items-start gap-4">
+              {/* Profile Picture */}
+              {profile?.pictureUrl ? (
+                <img 
+                  src={profile.pictureUrl} 
+                  alt="WhatsApp" 
+                  className="h-12 w-12 rounded-full object-cover border-2 border-green-500/30"
+                />
+              ) : (
+                <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center border-2 border-green-500/30">
+                  <MessageCircle className="h-6 w-6 text-green-500" />
+                </div>
+              )}
+              
+              {/* Profile Info */}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-foreground truncate">
+                  {profile?.name || 'WhatsApp conectado'}
                 </p>
-                {unit.evolution_instance_name && (
-                  <p className="text-xs text-muted-foreground">
-                    Instância: {unit.evolution_instance_name}
+                {profile?.phone && (
+                  <p className="text-sm text-muted-foreground">
+                    {formatPhone(profile.phone)}
+                  </p>
+                )}
+                {!profile?.phone && unit.evolution_instance_name && (
+                  <p className="text-xs text-muted-foreground truncate">
+                    {unit.evolution_instance_name}
                   </p>
                 )}
               </div>
+              
+              {/* Disconnect Button */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleDisconnect}
                 disabled={isLoading}
-                className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+                className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 shrink-0"
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
