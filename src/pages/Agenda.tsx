@@ -222,6 +222,8 @@ export default function Agenda() {
                   <CalendarWeekView
                     currentDate={currentDate}
                     appointments={appointments}
+                    barbers={barbers}
+                    selectedBarberId={selectedBarberId}
                     onAppointmentClick={handleAppointmentClick}
                     onSlotClick={handleSlotClick}
                     openingTime={businessSettings?.opening_time || undefined}
