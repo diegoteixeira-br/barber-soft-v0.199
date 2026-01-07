@@ -273,10 +273,19 @@ export function AutomationsTab() {
             <Label htmlFor="reminder-message">Mensagem de Lembrete</Label>
             <Textarea
               id="reminder-message"
-              placeholder="Olá {{nome}}! 👋 Lembrando do seu agendamento para HOJE às {{horario}} com {{profissional}}. 📍 {{servico}} Aguardamos você!"
+              placeholder={`Olá {{nome}}! 👋
+
+Lembrando do seu agendamento para HOJE às {{horario}} com {{profissional}}.
+
+📍 {{servico}}
+
+Aguardamos você! Se precisar remarcar, entre em contato. Tmj 💈
+
+📌 Responda *SIM* para confirmar presença
+📌 Responda *NÃO* se não puder comparecer`}
               value={reminderMessage}
               onChange={(e) => setReminderMessage(e.target.value)}
-              className="mt-2 min-h-[100px]"
+              className="mt-2 min-h-[140px]"
               disabled={!reminderEnabled}
             />
             <p className="mt-1 text-xs text-muted-foreground">
@@ -285,6 +294,9 @@ export function AutomationsTab() {
               <code className="ml-1 rounded bg-muted px-1">{"{{profissional}}"}</code>, 
               <code className="ml-1 rounded bg-muted px-1">{"{{servico}}"}</code>, 
               <code className="ml-1 rounded bg-muted px-1">{"{{data}}"}</code>
+            </p>
+            <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+              💡 <strong>Dica:</strong> Inclua opções de resposta (SIM/NÃO) para que o cliente possa confirmar presença diretamente pelo WhatsApp.
             </p>
           </div>
 

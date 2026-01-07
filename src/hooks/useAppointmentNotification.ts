@@ -84,7 +84,7 @@ export function useAppointmentNotification() {
           speak(message);
         }
       )
-      // Listen for cancellations (status updated to 'cancelled')
+      // Listen for status updates (confirmations and cancellations)
       .on(
         'postgres_changes',
         {
@@ -105,32 +105,42 @@ export function useAppointmentNotification() {
             status: string;
           };
 
-          // Only notify when status changes TO cancelled
-          if (updatedAppointment.status !== 'cancelled' || oldAppointment.status === 'cancelled') {
-            return;
-          }
-
           // Only notify for WhatsApp appointments
           if (updatedAppointment.source !== 'whatsapp') {
-            console.log('Skipping cancellation notification: not a WhatsApp appointment');
             return;
           }
 
-          // Avoid duplicate notifications
-          if (processedCancelIdsRef.current.has(updatedAppointment.id)) return;
-          processedCancelIdsRef.current.add(updatedAppointment.id);
-
-          // Check if cancellation vocal notification is enabled
-          if (!settings?.vocal_cancellation_enabled) return;
-
-          // Build cancellation message
           const date = new Date(updatedAppointment.start_time);
           const timeText = format(date, "HH 'e' mm", { locale: ptBR });
 
-          const message = `O agendamento de ${updatedAppointment.client_name} às ${timeText} foi cancelado`;
+          // === CONFIRMAÇÃO: status muda de pending para confirmed ===
+          if (updatedAppointment.status === 'confirmed' && oldAppointment.status === 'pending') {
+            // Avoid duplicate notifications
+            const confirmKey = `confirm_${updatedAppointment.id}`;
+            if (processedCancelIdsRef.current.has(confirmKey)) return;
+            processedCancelIdsRef.current.add(confirmKey);
 
-          // Speak using Web Speech API
-          speak(message);
+            // Check if vocal notification is enabled
+            if (!settings?.vocal_notification_enabled) return;
+
+            const message = `${updatedAppointment.client_name} confirmou presença para o agendamento das ${timeText}`;
+            speak(message);
+            return;
+          }
+
+          // === CANCELAMENTO: status muda para cancelled ===
+          if (updatedAppointment.status === 'cancelled' && oldAppointment.status !== 'cancelled') {
+            // Avoid duplicate notifications
+            if (processedCancelIdsRef.current.has(updatedAppointment.id)) return;
+            processedCancelIdsRef.current.add(updatedAppointment.id);
+
+            // Check if cancellation vocal notification is enabled
+            if (!settings?.vocal_cancellation_enabled) return;
+
+            const message = `O agendamento de ${updatedAppointment.client_name} às ${timeText} foi cancelado`;
+            speak(message);
+            return;
+          }
         }
       )
       .subscribe();

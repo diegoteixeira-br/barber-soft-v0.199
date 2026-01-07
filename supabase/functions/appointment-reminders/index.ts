@@ -5,6 +5,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Função para calcular delay humanizado anti-bloqueio
+function getHumanizedDelay(totalMessages: number, currentIndex: number): number {
+  let baseMin: number, baseMax: number;
+  
+  if (totalMessages <= 3) {
+    baseMin = 3000; baseMax = 8000; // 3-8 segundos
+  } else if (totalMessages <= 10) {
+    baseMin = 8000; baseMax = 20000; // 8-20 segundos
+  } else {
+    baseMin = 15000; baseMax = 45000; // 15-45 segundos
+  }
+  
+  // Adicionar variação aleatória
+  const randomFactor = Math.random();
+  const delay = Math.floor(baseMin + (baseMax - baseMin) * randomFactor);
+  
+  console.log(`Delay humanizado para mensagem ${currentIndex + 1}/${totalMessages}: ${delay}ms`);
+  return delay;
+}
+
+// Função para delay assíncrono
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 interface BusinessSettings {
   id: string;
   user_id: string;
@@ -189,7 +212,10 @@ Deno.serve(async (req) => {
         const barberMap = new Map((barbers || []).map((b: Barber) => [b.id, b.name]));
         const serviceMap = new Map((services || []).map((s: Service) => [s.id, s.name]));
 
-        // Processar cada agendamento
+        // Processar cada agendamento com delay humanizado
+        const totalAppointments = unitAppointments.length;
+        let appointmentIndex = 0;
+        
         for (const appointment of unitAppointments) {
           // Verificar se já enviou lembrete para este agendamento
           const { data: existingLog } = await supabase
@@ -251,9 +277,21 @@ Deno.serve(async (req) => {
 
           console.log(`Enviando lembrete para ${appointment.client_name} (${phone})`);
 
+          // Delay humanizado antes de enviar (exceto para o primeiro)
+          if (appointmentIndex > 0) {
+            const humanDelay = getHumanizedDelay(totalAppointments, appointmentIndex);
+            console.log(`⏳ Aguardando ${humanDelay}ms antes de enviar para ${appointment.client_name}...`);
+            await sleep(humanDelay);
+          }
+          appointmentIndex++;
+
           // Enviar via Evolution API (DIRETO, sem n8n)
           try {
             const evolutionUrl = `${evolutionApiUrl}/message/sendText/${unit.evolution_instance_name}`;
+            
+            // Calcular delay de presença (simulando digitação) - 1.5 a 3.5 segundos
+            const presenceDelay = Math.floor(1500 + Math.random() * 2000);
+            
             const response = await fetch(evolutionUrl, {
               method: "POST",
               headers: {
@@ -262,7 +300,7 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 number: phone,
-                delay: 1000,
+                delay: presenceDelay,
                 text: message,
               }),
             });

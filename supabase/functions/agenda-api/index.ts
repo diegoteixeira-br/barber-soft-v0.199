@@ -195,9 +195,13 @@ serve(async (req) => {
       case 'check_slot':
         return await handleCheckSlot(supabase, enrichedBody, corsHeaders);
       
+      // Confirmar ou cancelar agendamento via resposta do cliente
+      case 'confirm_appointment':
+        return await handleConfirmAppointment(supabase, enrichedBody, corsHeaders);
+      
       default:
         return new Response(
-          JSON.stringify({ success: false, error: 'Ação inválida. Actions válidas: check, check_availability, create, schedule_appointment, cancel, cancel_appointment, check_client, register_client, update_client, check_slot' }),
+          JSON.stringify({ success: false, error: 'Ação inválida. Actions válidas: check, check_availability, create, schedule_appointment, cancel, cancel_appointment, check_client, register_client, update_client, check_slot, confirm_appointment' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
@@ -1448,5 +1452,152 @@ async function handleCheckSlot(supabase: any, body: any, corsHeaders: any) {
       reason: null
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// Handler para confirmar/cancelar agendamento via resposta do cliente
+async function handleConfirmAppointment(supabase: any, body: any, corsHeaders: any) {
+  const { phone, response, instance_name } = body;
+
+  if (!phone || !response) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'phone e response são obrigatórios' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  console.log(`=== CONFIRM_APPOINTMENT: phone=${phone}, response="${response}", instance=${instance_name} ===`);
+
+  // Normalizar telefone (remover formatação e código do país se presente)
+  let normalizedPhone = phone.replace(/\D/g, "");
+  // Remover código do país (55) se presente
+  if (normalizedPhone.startsWith("55") && normalizedPhone.length > 11) {
+    normalizedPhone = normalizedPhone.substring(2);
+  }
+  // Também testar com o código do país
+  const phoneVariants = [normalizedPhone];
+  if (!normalizedPhone.startsWith("55")) {
+    phoneVariants.push("55" + normalizedPhone);
+  }
+
+  console.log(`Buscando agendamento para telefones: ${phoneVariants.join(", ")}`);
+
+  // Buscar agendamento pendente mais próximo deste telefone
+  const now = new Date().toISOString();
+  
+  const { data: appointment, error: appointmentError } = await supabase
+    .from("appointments")
+    .select("*")
+    .or(phoneVariants.map(p => `client_phone.eq.${p}`).join(","))
+    .eq("status", "pending")
+    .gte("start_time", now)
+    .order("start_time", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (appointmentError) {
+    console.error("Erro ao buscar agendamento:", appointmentError);
+    return new Response(
+      JSON.stringify({ success: false, error: "Erro ao buscar agendamento" }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!appointment) {
+    console.log("Nenhum agendamento pendente encontrado para este telefone");
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: "Nenhum agendamento pendente encontrado para este número" 
+      }),
+      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  console.log(`Agendamento encontrado: ${appointment.id} - ${appointment.client_name} às ${appointment.start_time}`);
+
+  // Normalizar resposta do cliente
+  const normalizedResponse = response.toLowerCase().trim();
+  
+  // Verificar se é confirmação
+  const isConfirm = normalizedResponse.includes("sim") || 
+                    normalizedResponse === "1" || 
+                    normalizedResponse === "s" ||
+                    normalizedResponse === "confirmo" ||
+                    normalizedResponse === "confirmado";
+  
+  // Verificar se é cancelamento
+  const isCancel = normalizedResponse.includes("nao") || 
+                   normalizedResponse.includes("não") || 
+                   normalizedResponse === "2" || 
+                   normalizedResponse === "n" ||
+                   normalizedResponse === "cancela" ||
+                   normalizedResponse === "cancelar";
+
+  if (isConfirm) {
+    console.log(`✅ Confirmando agendamento ${appointment.id}`);
+    
+    const { error: updateError } = await supabase
+      .from("appointments")
+      .update({ status: "confirmed" })
+      .eq("id", appointment.id);
+
+    if (updateError) {
+      console.error("Erro ao confirmar agendamento:", updateError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Erro ao confirmar agendamento" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        action: "confirmed",
+        appointment_id: appointment.id,
+        client_name: appointment.client_name,
+        start_time: appointment.start_time,
+        message: `Agendamento de ${appointment.client_name} confirmado com sucesso`
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  } else if (isCancel) {
+    console.log(`❌ Cancelando agendamento ${appointment.id}`);
+    
+    const { error: updateError } = await supabase
+      .from("appointments")
+      .update({ status: "cancelled" })
+      .eq("id", appointment.id);
+
+    if (updateError) {
+      console.error("Erro ao cancelar agendamento:", updateError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Erro ao cancelar agendamento" }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        action: "cancelled",
+        appointment_id: appointment.id,
+        client_name: appointment.client_name,
+        start_time: appointment.start_time,
+        message: `Agendamento de ${appointment.client_name} cancelado`
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Resposta não reconhecida
+  console.log(`⚠️ Resposta não reconhecida: "${response}"`);
+  return new Response(
+    JSON.stringify({ 
+      success: false, 
+      error: "Resposta não reconhecida. Responda SIM para confirmar ou NÃO para cancelar.",
+      received_response: response
+    }),
+    { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }
