@@ -58,7 +58,7 @@ export interface QuickServiceFormData {
   scheduled_time?: string;
 }
 
-export function useAppointments(startDate?: Date, endDate?: Date, barberId?: string | null) {
+export function useAppointments(startDate?: Date, endDate?: Date) {
   const { currentUnitId, currentCompanyId } = useCurrentUnit();
   const queryClient = useQueryClient();
 
@@ -90,7 +90,7 @@ export function useAppointments(startDate?: Date, endDate?: Date, barberId?: str
 
   // Fetch ALL appointments including cancelled (we filter on the frontend for toggle)
   const query = useQuery({
-    queryKey: ["appointments", currentUnitId, startDate?.toISOString(), endDate?.toISOString(), barberId],
+    queryKey: ["appointments", currentUnitId, startDate?.toISOString(), endDate?.toISOString()],
     queryFn: async () => {
       if (!currentUnitId) return [];
 
@@ -110,9 +110,8 @@ export function useAppointments(startDate?: Date, endDate?: Date, barberId?: str
       if (endDate) {
         queryBuilder = queryBuilder.lte("start_time", endDate.toISOString());
       }
-      if (barberId) {
-        queryBuilder = queryBuilder.eq("barber_id", barberId);
-      }
+      // Não filtra por barberId - carrega todos para visualização completa
+      // O filtro visual é aplicado no frontend
 
       const { data, error } = await queryBuilder;
 

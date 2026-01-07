@@ -6,9 +6,10 @@ interface CalendarEventProps {
   appointment: Appointment;
   onClick: () => void;
   compact?: boolean;
+  dimmed?: boolean;
 }
 
-export function CalendarEvent({ appointment, onClick, compact = false }: CalendarEventProps) {
+export function CalendarEvent({ appointment, onClick, compact = false, dimmed = false }: CalendarEventProps) {
   const barberColor = appointment.barber?.calendar_color || "#FF6B00";
   const startTime = format(new Date(appointment.start_time), "HH:mm");
   const endTime = format(new Date(appointment.end_time), "HH:mm");
@@ -20,11 +21,13 @@ export function CalendarEvent({ appointment, onClick, compact = false }: Calenda
       <button
         onClick={(e) => {
           e.stopPropagation();
-          onClick();
+          if (!dimmed) onClick();
         }}
         className={cn(
-          "w-full text-left px-1.5 py-0.5 rounded text-xs truncate transition-all hover:opacity-80",
-          isCancelled && "opacity-50 line-through"
+          "w-full text-left px-1.5 py-0.5 rounded text-xs truncate transition-all",
+          !dimmed && "hover:opacity-80",
+          isCancelled && "opacity-50 line-through",
+          dimmed && "opacity-40 cursor-default"
         )}
         style={{
           backgroundColor: isCancelled ? "hsl(var(--muted))" : `${barberColor}20`,
@@ -41,11 +44,13 @@ export function CalendarEvent({ appointment, onClick, compact = false }: Calenda
     <button
       onClick={(e) => {
         e.stopPropagation();
-        onClick();
+        if (!dimmed) onClick();
       }}
       className={cn(
-        "w-full text-left p-2 rounded-md transition-all hover:scale-[1.02] hover:shadow-lg group",
-        isCancelled && "opacity-60"
+        "w-full text-left p-2 rounded-md transition-all group",
+        !dimmed && "hover:scale-[1.02] hover:shadow-lg",
+        isCancelled && "opacity-60",
+        dimmed && "opacity-40 cursor-default"
       )}
       style={{
         backgroundColor: isCancelled ? "hsl(var(--muted))" : `${barberColor}15`,

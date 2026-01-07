@@ -14,6 +14,7 @@ interface CalendarWeekViewProps {
   closingTime?: string;
   timezone?: string;
   isCompactMode?: boolean;
+  selectedBarberId?: string | null;
 }
 
 const DEFAULT_HOUR_HEIGHT = 80;
@@ -29,6 +30,7 @@ export function CalendarWeekView({
   closingTime,
   timezone,
   isCompactMode = false,
+  selectedBarberId,
 }: CalendarWeekViewProps) {
   const weekStart = startOfWeek(currentDate, { locale: ptBR });
   const weekEnd = endOfWeek(currentDate, { locale: ptBR });
@@ -203,6 +205,7 @@ export function CalendarWeekView({
                             key={apt.id}
                             appointment={apt}
                             onClick={() => onAppointmentClick(apt)}
+                            dimmed={!!selectedBarberId && apt.barber_id !== selectedBarberId}
                           />
                         ))}
                       </div>
