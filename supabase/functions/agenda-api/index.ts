@@ -191,9 +191,13 @@ serve(async (req) => {
       case 'update_client':
         return await handleUpdateClient(supabase, enrichedBody, corsHeaders);
       
+      // Verificar slot específico (profissional + horário)
+      case 'check_slot':
+        return await handleCheckSlot(supabase, enrichedBody, corsHeaders);
+      
       default:
         return new Response(
-          JSON.stringify({ success: false, error: 'Ação inválida. Actions válidas: check, check_availability, create, schedule_appointment, cancel, cancel_appointment, check_client, register_client, update_client' }),
+          JSON.stringify({ success: false, error: 'Ação inválida. Actions válidas: check, check_availability, create, schedule_appointment, cancel, cancel_appointment, check_client, register_client, update_client, check_slot' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
@@ -1305,6 +1309,143 @@ async function handleUpdateClient(supabase: any, body: any, corsHeaders: any) {
         birth_date: updatedClient.birth_date,
         notes: updatedClient.notes
       }
+    }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+// Handler para verificar slot específico (profissional + horário)
+async function handleCheckSlot(supabase: any, body: any, corsHeaders: any) {
+  const { date, time, professional, unit_id, unit_timezone } = body;
+  const timezone = unit_timezone || 'America/Sao_Paulo';
+
+  console.log('=== CHECK_SLOT REQUEST ===');
+  console.log(`Date: ${date}, Time: ${time}, Professional: ${professional}, Unit: ${unit_id}`);
+
+  // Validações
+  if (!date) {
+    return new Response(
+      JSON.stringify({ success: false, available: false, error: 'Campo obrigatório: date' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!time) {
+    return new Response(
+      JSON.stringify({ success: false, available: false, error: 'Campo obrigatório: time' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!professional) {
+    return new Response(
+      JSON.stringify({ success: false, available: false, error: 'Campo obrigatório: professional' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!unit_id) {
+    return new Response(
+      JSON.stringify({ success: false, available: false, error: 'Campo obrigatório: unit_id ou instance_name' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Construir datetime completo
+  const dateOnly = date.split('T')[0];
+  const timeOnly = time.includes(':') ? time : `${time}:00`;
+  const localDateTime = `${dateOnly}T${timeOnly}:00`;
+
+  console.log(`Checking specific slot: ${localDateTime} with ${professional}`);
+
+  // Buscar barbeiro específico pelo nome (case-insensitive)
+  const { data: barbers, error: barberError } = await supabase
+    .from('barbers')
+    .select('id, name')
+    .eq('unit_id', unit_id)
+    .eq('is_active', true)
+    .ilike('name', `%${professional}%`);
+
+  if (barberError) {
+    console.error('Error fetching barber:', barberError);
+    return new Response(
+      JSON.stringify({ success: false, available: false, error: 'Erro ao buscar profissional' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (!barbers || barbers.length === 0) {
+    console.log(`Profissional "${professional}" não encontrado na unidade ${unit_id}`);
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        available: false, 
+        professional: professional,
+        datetime: localDateTime,
+        reason: `Profissional "${professional}" não encontrado ou inativo`
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const barber = barbers[0];
+  console.log(`Barbeiro encontrado: ${barber.name} (ID: ${barber.id})`);
+
+  // Converter horário local para UTC
+  const slotStart = convertLocalToUTC(localDateTime, timezone);
+  const slotEnd = new Date(slotStart.getTime() + 30 * 60 * 1000); // 30 min padrão
+
+  console.log(`Verificando conflitos: ${slotStart.toISOString()} - ${slotEnd.toISOString()}`);
+
+  // Verificar conflitos APENAS para este barbeiro específico
+  const { data: conflicts, error: conflictError } = await supabase
+    .from('appointments')
+    .select('id, client_name, start_time, end_time')
+    .eq('unit_id', unit_id)
+    .eq('barber_id', barber.id)
+    .neq('status', 'cancelled')
+    .lt('start_time', slotEnd.toISOString())
+    .gt('end_time', slotStart.toISOString());
+
+  if (conflictError) {
+    console.error('Error checking conflicts:', conflictError);
+    return new Response(
+      JSON.stringify({ success: false, available: false, error: 'Erro ao verificar conflitos' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (conflicts && conflicts.length > 0) {
+    console.log(`SLOT OCUPADO: ${barber.name} já tem ${conflicts.length} agendamento(s) neste horário`);
+    console.log('Conflitos encontrados:', JSON.stringify(conflicts, null, 2));
+    
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        available: false, 
+        professional: barber.name,
+        datetime: localDateTime,
+        reason: `${barber.name} já tem agendamento neste horário`,
+        conflicts: conflicts.map((c: any) => ({
+          client: c.client_name,
+          start: c.start_time,
+          end: c.end_time
+        }))
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  console.log(`SLOT DISPONÍVEL: ${barber.name} está livre às ${timeOnly}`);
+  
+  return new Response(
+    JSON.stringify({ 
+      success: true, 
+      available: true, 
+      professional: barber.name,
+      professional_id: barber.id,
+      datetime: localDateTime,
+      reason: null
     }),
     { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
