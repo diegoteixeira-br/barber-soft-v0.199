@@ -44,18 +44,40 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`Looking up shop info for instance: ${whatsapp_instance_id}`);
+    // Input validation for whatsapp_instance_id
+    const instanceId = String(whatsapp_instance_id).trim();
+    
+    // Length validation (max 100 characters)
+    if (instanceId.length > 100) {
+      console.error("whatsapp_instance_id too long");
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid whatsapp_instance_id format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Format validation: only alphanumeric, underscores, and hyphens allowed
+    const validInstanceIdPattern = /^[a-zA-Z0-9_-]+$/;
+    if (!validInstanceIdPattern.test(instanceId)) {
+      console.error("whatsapp_instance_id contains invalid characters");
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid whatsapp_instance_id format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Looking up shop info for instance: ${instanceId}`);
 
     // Initialize Supabase client with service role key for RLS bypass
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find unit by evolution_instance_name
+    // Find unit by evolution_instance_name (using validated instanceId)
     const { data: unit, error: unitError } = await supabase
       .from("units")
       .select("id, name, address, phone, manager_name")
-      .eq("evolution_instance_name", whatsapp_instance_id)
+      .eq("evolution_instance_name", instanceId)
       .maybeSingle();
 
     if (unitError) {
@@ -67,7 +89,7 @@ Deno.serve(async (req) => {
     }
 
     if (!unit) {
-      console.log(`No unit found for instance: ${whatsapp_instance_id}`);
+      console.log(`No unit found for instance: ${instanceId}`);
       return new Response(
         JSON.stringify({ success: false, error: "Unit not found for this WhatsApp instance" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
