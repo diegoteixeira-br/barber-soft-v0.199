@@ -162,7 +162,7 @@ export function CalendarWeekView({
         </div>
 
         {/* Time slots - SCROLLABLE */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto min-h-0">
           <div className="grid grid-cols-8 relative">
             {/* Time column */}
             <div className="border-r border-border">

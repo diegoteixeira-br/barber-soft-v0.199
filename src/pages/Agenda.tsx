@@ -192,7 +192,7 @@ export default function Agenda() {
             </TabsList>
           </div>
           
-          <TabsContent value="calendar" className={`flex-1 flex flex-col mt-0 min-h-0 ${isCompactMode ? 'overflow-hidden' : ''}`}>
+          <TabsContent value="calendar" className="flex-1 flex flex-col mt-0 min-h-0 overflow-hidden">
             <CalendarHeader
               currentDate={currentDate}
               view={view}
