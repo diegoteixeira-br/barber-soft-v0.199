@@ -1,4 +1,4 @@
-import { Building2, MapPin, Phone, User, MoreVertical, Pencil, Trash2, MessageCircle, Crown, Key, Copy, Check } from "lucide-react";
+import { Building2, MapPin, Phone, User, MoreVertical, Pencil, Trash2, MessageCircle, Crown } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,16 +9,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Unit } from "@/hooks/useUnits";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 interface UnitCardProps {
   unit: Unit;
@@ -32,17 +25,7 @@ type WhatsAppStatus = 'disconnected' | 'connected' | 'checking';
 
 export function UnitCard({ unit, onEdit, onDelete, onConfigureWhatsApp, onSetHeadquarters }: UnitCardProps) {
   const [whatsappStatus, setWhatsappStatus] = useState<WhatsAppStatus>('checking');
-  const [copiedKey, setCopiedKey] = useState(false);
-  const { toast } = useToast();
 
-  const copyApiKey = async () => {
-    if (unit.agenda_api_key) {
-      await navigator.clipboard.writeText(unit.agenda_api_key);
-      setCopiedKey(true);
-      toast({ title: "Chave de API copiada!" });
-      setTimeout(() => setCopiedKey(false), 2000);
-    }
-  };
   useEffect(() => {
     const checkWhatsAppStatus = async () => {
       // Se não tem instance_name configurado, está desconectado
@@ -176,32 +159,6 @@ export function UnitCard({ unit, onEdit, onDelete, onConfigureWhatsApp, onSetHea
             <User className="h-4 w-4 text-primary/70" />
             <span>{unit.manager_name}</span>
           </div>
-        )}
-
-        {unit.agenda_api_key && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div 
-                  className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer hover:text-foreground transition-colors group/api"
-                  onClick={copyApiKey}
-                >
-                  <Key className="h-4 w-4 text-primary/70" />
-                  <span className="font-mono text-xs truncate max-w-[180px]">
-                    {unit.agenda_api_key.substring(0, 12)}...
-                  </span>
-                  {copiedKey ? (
-                    <Check className="h-3 w-3 text-green-500" />
-                  ) : (
-                    <Copy className="h-3 w-3 opacity-0 group-hover/api:opacity-100 transition-opacity" />
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Clique para copiar a chave de API da agenda</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
         )}
       </CardContent>
     </Card>

@@ -152,13 +152,14 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get API key from header
+    // Get API key from header and validate against universal N8N_SECRET_KEY
     const apiKey = req.headers.get('x-api-key');
+    const n8nSecretKey = Deno.env.get('N8N_SECRET_KEY');
     
-    if (!apiKey) {
-      console.error('Missing API key');
+    if (!apiKey || apiKey !== n8nSecretKey) {
+      console.error('Invalid or missing API key');
       return new Response(
-        JSON.stringify({ success: false, error: 'Chave de API não fornecida' }),
+        JSON.stringify({ success: false, error: 'Chave de API inválida' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -169,21 +170,18 @@ serve(async (req) => {
     console.log('Agenda API called with action:', action);
     console.log('Request body:', JSON.stringify(body));
 
-    // Resolve unit from instance_name or unit_id, validating with per-unit API key
+    // Resolve unit from instance_name or unit_id (authentication already done via N8N_SECRET_KEY)
     let resolvedUnitId = body.unit_id;
     let companyId = null;
     let unitTimezone = 'America/Sao_Paulo'; // default
     let validatedUnit = null;
 
-    // Primary authentication: validate API key against unit's agenda_api_key
-    // This ensures each unit has its own unique key for security isolation
     if (instance_name) {
       console.log(`Looking up unit by instance_name: ${instance_name}`);
       
-      // Busca direto na tabela units pelo evolution_instance_name e valida API key
       const { data: unit, error: unitError } = await supabase
         .from('units')
-        .select('id, company_id, timezone, evolution_instance_name, evolution_api_key, agenda_api_key')
+        .select('id, company_id, timezone, evolution_instance_name, evolution_api_key')
         .eq('evolution_instance_name', instance_name)
         .maybeSingle();
       
@@ -202,26 +200,16 @@ serve(async (req) => {
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-
-      // Validate per-unit API key
-      if (!unit.agenda_api_key || unit.agenda_api_key !== apiKey) {
-        console.error('Invalid API key for unit:', instance_name);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Chave de API inválida para esta unidade' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
       
       validatedUnit = unit;
       resolvedUnitId = unit.id;
       companyId = unit.company_id;
       unitTimezone = unit.timezone || 'America/Sao_Paulo';
-      console.log(`Resolved and validated unit_id: ${resolvedUnitId}, company_id: ${companyId}, timezone: ${unitTimezone}`);
+      console.log(`Resolved unit_id: ${resolvedUnitId}, company_id: ${companyId}, timezone: ${unitTimezone}`);
     } else if (resolvedUnitId) {
-      // If unit_id is provided directly, validate API key against it
       const { data: unit, error: unitError } = await supabase
         .from('units')
-        .select('id, company_id, timezone, evolution_instance_name, evolution_api_key, agenda_api_key')
+        .select('id, company_id, timezone, evolution_instance_name, evolution_api_key')
         .eq('id', resolvedUnitId)
         .maybeSingle();
 
@@ -233,21 +221,11 @@ serve(async (req) => {
         );
       }
 
-      // Validate per-unit API key
-      if (!unit.agenda_api_key || unit.agenda_api_key !== apiKey) {
-        console.error('Invalid API key for unit_id:', resolvedUnitId);
-        return new Response(
-          JSON.stringify({ success: false, error: 'Chave de API inválida para esta unidade' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
       validatedUnit = unit;
       companyId = unit.company_id;
       unitTimezone = unit.timezone || 'America/Sao_Paulo';
-      console.log(`Validated unit_id: ${resolvedUnitId}, company_id: ${companyId}, timezone: ${unitTimezone}`);
+      console.log(`Resolved unit_id: ${resolvedUnitId}, company_id: ${companyId}, timezone: ${unitTimezone}`);
     } else {
-      // No unit identifier provided - cannot authenticate
       console.error('No instance_name or unit_id provided');
       return new Response(
         JSON.stringify({ success: false, error: 'É necessário fornecer instance_name ou unit_id' }),

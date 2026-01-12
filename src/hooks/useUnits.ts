@@ -10,7 +10,6 @@ export interface Unit {
   manager_name: string | null;
   evolution_instance_name: string | null;
   evolution_api_key: string | null;
-  agenda_api_key: string | null;
   user_id: string;
   company_id: string | null;
   created_at: string;
