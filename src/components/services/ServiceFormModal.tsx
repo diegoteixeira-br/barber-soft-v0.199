@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -46,16 +47,26 @@ export function ServiceFormModal({
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceSchema),
     defaultValues: {
-      name: service?.name || "",
-      price: service?.price || 0,
-      duration_minutes: service?.duration_minutes || 30,
-      is_active: service?.is_active ?? true,
+      name: "",
+      price: 0,
+      duration_minutes: 30,
+      is_active: true,
     },
   });
 
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        name: service?.name || "",
+        price: service?.price || 0,
+        duration_minutes: service?.duration_minutes || 30,
+        is_active: service?.is_active ?? true,
+      });
+    }
+  }, [open, service, form]);
+
   const handleSubmit = (data: ServiceFormValues) => {
     onSubmit(data);
-    form.reset();
   };
 
   return (
