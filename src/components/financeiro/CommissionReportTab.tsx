@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DollarSign, Wallet, TrendingUp } from "lucide-react";
+import { DollarSign, Wallet, TrendingUp, Banknote, Smartphone, CreditCard } from "lucide-react";
 import { useFinancialData, getMonthRange, calculateCommission, calculateProfit } from "@/hooks/useFinancialData";
 import { useBarbers } from "@/hooks/useBarbers";
 import { useCurrentUnit } from "@/contexts/UnitContext";
@@ -48,6 +48,28 @@ export function CommissionReportTab() {
       },
       { total: 0, commission: 0, profit: 0 }
     );
+  }, [appointments]);
+
+  // Payment method breakdown
+  const paymentBreakdown = useMemo(() => {
+    const breakdown = {
+      cash: { total: 0, commission: 0, count: 0 },
+      pix: { total: 0, commission: 0, count: 0 },
+      debit_card: { total: 0, commission: 0, count: 0 },
+      credit_card: { total: 0, commission: 0, count: 0 },
+    };
+
+    appointments.forEach((apt) => {
+      const method = (apt.payment_method || "cash") as keyof typeof breakdown;
+      const commission = calculateCommission(apt.total_price, apt.barber?.commission_rate ?? null);
+      if (breakdown[method]) {
+        breakdown[method].total += apt.total_price;
+        breakdown[method].commission += commission;
+        breakdown[method].count += 1;
+      }
+    });
+
+    return breakdown;
   }, [appointments]);
 
   const formatCurrency = (value: number) => {
@@ -154,6 +176,53 @@ export function CommissionReportTab() {
           icon={TrendingUp}
           variant="success"
         />
+      </div>
+
+      {/* Payment Method Breakdown */}
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold text-foreground">Resumo por Forma de Pagamento</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="p-4 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-2 mb-2">
+              <Banknote className="h-4 w-4 text-emerald-500" />
+              <span className="text-sm font-medium text-muted-foreground">Dinheiro</span>
+            </div>
+            <p className="text-lg font-bold text-foreground">{formatCurrency(paymentBreakdown.cash.total)}</p>
+            <p className="text-xs text-muted-foreground">
+              {paymentBreakdown.cash.count} atend. • Comissão: {formatCurrency(paymentBreakdown.cash.commission)}
+            </p>
+          </div>
+          <div className="p-4 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-2 mb-2">
+              <Smartphone className="h-4 w-4 text-cyan-500" />
+              <span className="text-sm font-medium text-muted-foreground">PIX</span>
+            </div>
+            <p className="text-lg font-bold text-foreground">{formatCurrency(paymentBreakdown.pix.total)}</p>
+            <p className="text-xs text-muted-foreground">
+              {paymentBreakdown.pix.count} atend. • Comissão: {formatCurrency(paymentBreakdown.pix.commission)}
+            </p>
+          </div>
+          <div className="p-4 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-2 mb-2">
+              <CreditCard className="h-4 w-4 text-blue-500" />
+              <span className="text-sm font-medium text-muted-foreground">Débito</span>
+            </div>
+            <p className="text-lg font-bold text-foreground">{formatCurrency(paymentBreakdown.debit_card.total)}</p>
+            <p className="text-xs text-muted-foreground">
+              {paymentBreakdown.debit_card.count} atend. • Comissão: {formatCurrency(paymentBreakdown.debit_card.commission)}
+            </p>
+          </div>
+          <div className="p-4 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-2 mb-2">
+              <CreditCard className="h-4 w-4 text-purple-500" />
+              <span className="text-sm font-medium text-muted-foreground">Crédito</span>
+            </div>
+            <p className="text-lg font-bold text-foreground">{formatCurrency(paymentBreakdown.credit_card.total)}</p>
+            <p className="text-xs text-muted-foreground">
+              {paymentBreakdown.credit_card.count} atend. • Comissão: {formatCurrency(paymentBreakdown.credit_card.commission)}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Commission Table */}
