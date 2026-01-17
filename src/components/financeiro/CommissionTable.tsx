@@ -43,15 +43,34 @@ export function CommissionTable({
 
   const totals = appointments.reduce(
     (acc, apt) => {
-      const cardFee = calculateCardFee(apt.total_price, apt.payment_method, debitFeePercent, creditFeePercent);
-      const netValue = calculateNetValue(apt.total_price, apt.payment_method, debitFeePercent, creditFeePercent);
+      const barberDebitFee = apt.barber?.debit_card_fee_percent;
+      const barberCreditFee = apt.barber?.credit_card_fee_percent;
+      
+      const cardFee = calculateCardFee(
+        apt.total_price, 
+        apt.payment_method, 
+        debitFeePercent, 
+        creditFeePercent,
+        barberDebitFee,
+        barberCreditFee
+      );
+      const netValue = calculateNetValue(
+        apt.total_price, 
+        apt.payment_method, 
+        debitFeePercent, 
+        creditFeePercent,
+        barberDebitFee,
+        barberCreditFee
+      );
       const commission = calculateCommissionWithFees(
         apt.total_price, 
         apt.payment_method, 
         apt.barber?.commission_rate ?? null,
         debitFeePercent,
         creditFeePercent,
-        calculationBase
+        calculationBase,
+        barberDebitFee,
+        barberCreditFee
       );
       const profit = calculateProfitWithFees(
         apt.total_price,
@@ -59,7 +78,9 @@ export function CommissionTable({
         apt.barber?.commission_rate ?? null,
         debitFeePercent,
         creditFeePercent,
-        calculationBase
+        calculationBase,
+        barberDebitFee,
+        barberCreditFee
       );
       
       return {
@@ -111,15 +132,34 @@ export function CommissionTable({
           <TableBody>
             {appointments.map((appointment) => {
               const commissionRate = appointment.barber?.commission_rate ?? 50;
-              const cardFee = calculateCardFee(appointment.total_price, appointment.payment_method, debitFeePercent, creditFeePercent);
-              const netValue = calculateNetValue(appointment.total_price, appointment.payment_method, debitFeePercent, creditFeePercent);
+              const barberDebitFee = appointment.barber?.debit_card_fee_percent;
+              const barberCreditFee = appointment.barber?.credit_card_fee_percent;
+              
+              const cardFee = calculateCardFee(
+                appointment.total_price, 
+                appointment.payment_method, 
+                debitFeePercent, 
+                creditFeePercent,
+                barberDebitFee,
+                barberCreditFee
+              );
+              const netValue = calculateNetValue(
+                appointment.total_price, 
+                appointment.payment_method, 
+                debitFeePercent, 
+                creditFeePercent,
+                barberDebitFee,
+                barberCreditFee
+              );
               const commissionValue = calculateCommissionWithFees(
                 appointment.total_price,
                 appointment.payment_method,
                 commissionRate,
                 debitFeePercent,
                 creditFeePercent,
-                calculationBase
+                calculationBase,
+                barberDebitFee,
+                barberCreditFee
               );
               const profitValue = calculateProfitWithFees(
                 appointment.total_price,
@@ -127,7 +167,9 @@ export function CommissionTable({
                 commissionRate,
                 debitFeePercent,
                 creditFeePercent,
-                calculationBase
+                calculationBase,
+                barberDebitFee,
+                barberCreditFee
               );
 
               return (

@@ -16,6 +16,8 @@ export interface FinancialAppointment {
     id: string;
     name: string;
     commission_rate: number | null;
+    debit_card_fee_percent: number | null;
+    credit_card_fee_percent: number | null;
   } | null;
   service: {
     id: string;
@@ -48,7 +50,7 @@ export function useFinancialData(dateRange?: DateRange, barberId?: string | null
           total_price,
           status,
           payment_method,
-          barber:barbers(id, name, commission_rate),
+          barber:barbers(id, name, commission_rate, debit_card_fee_percent, credit_card_fee_percent),
           service:services(id, name, price)
         `)
         .eq("unit_id", currentUnitId)
@@ -113,17 +115,22 @@ export function calculateProfit(totalPrice: number, commissionRate: number | nul
 }
 
 // Calculate card fee based on payment method
+// Uses barber-specific fees if available, otherwise global fees
 export function calculateCardFee(
   totalPrice: number,
   paymentMethod: string | null,
   debitFeePercent: number,
-  creditFeePercent: number
+  creditFeePercent: number,
+  barberDebitFee?: number | null,
+  barberCreditFee?: number | null
 ): number {
   if (paymentMethod === "debit_card") {
-    return totalPrice * (debitFeePercent / 100);
+    const fee = barberDebitFee ?? debitFeePercent;
+    return totalPrice * (fee / 100);
   }
   if (paymentMethod === "credit_card") {
-    return totalPrice * (creditFeePercent / 100);
+    const fee = barberCreditFee ?? creditFeePercent;
+    return totalPrice * (fee / 100);
   }
   return 0; // Cash and PIX have no fee
 }
@@ -133,9 +140,11 @@ export function calculateNetValue(
   totalPrice: number,
   paymentMethod: string | null,
   debitFeePercent: number,
-  creditFeePercent: number
+  creditFeePercent: number,
+  barberDebitFee?: number | null,
+  barberCreditFee?: number | null
 ): number {
-  return totalPrice - calculateCardFee(totalPrice, paymentMethod, debitFeePercent, creditFeePercent);
+  return totalPrice - calculateCardFee(totalPrice, paymentMethod, debitFeePercent, creditFeePercent, barberDebitFee, barberCreditFee);
 }
 
 // Calculate commission based on configuration (gross or net)
@@ -145,12 +154,14 @@ export function calculateCommissionWithFees(
   commissionRate: number | null,
   debitFeePercent: number,
   creditFeePercent: number,
-  calculationBase: 'gross' | 'net'
+  calculationBase: 'gross' | 'net',
+  barberDebitFee?: number | null,
+  barberCreditFee?: number | null
 ): number {
   const rate = commissionRate ?? 50;
   
   if (calculationBase === 'net') {
-    const netValue = calculateNetValue(totalPrice, paymentMethod, debitFeePercent, creditFeePercent);
+    const netValue = calculateNetValue(totalPrice, paymentMethod, debitFeePercent, creditFeePercent, barberDebitFee, barberCreditFee);
     return netValue * (rate / 100);
   }
   
@@ -165,16 +176,20 @@ export function calculateProfitWithFees(
   commissionRate: number | null,
   debitFeePercent: number,
   creditFeePercent: number,
-  calculationBase: 'gross' | 'net'
+  calculationBase: 'gross' | 'net',
+  barberDebitFee?: number | null,
+  barberCreditFee?: number | null
 ): number {
-  const cardFee = calculateCardFee(totalPrice, paymentMethod, debitFeePercent, creditFeePercent);
+  const cardFee = calculateCardFee(totalPrice, paymentMethod, debitFeePercent, creditFeePercent, barberDebitFee, barberCreditFee);
   const commission = calculateCommissionWithFees(
     totalPrice,
     paymentMethod,
     commissionRate,
     debitFeePercent,
     creditFeePercent,
-    calculationBase
+    calculationBase,
+    barberDebitFee,
+    barberCreditFee
   );
   return totalPrice - cardFee - commission;
 }

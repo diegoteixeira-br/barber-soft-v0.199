@@ -164,6 +164,8 @@ export type Database = {
           commission_rate: number | null
           company_id: string | null
           created_at: string
+          credit_card_fee_percent: number | null
+          debit_card_fee_percent: number | null
           email: string | null
           id: string
           invite_token: string | null
@@ -179,6 +181,8 @@ export type Database = {
           commission_rate?: number | null
           company_id?: string | null
           created_at?: string
+          credit_card_fee_percent?: number | null
+          debit_card_fee_percent?: number | null
           email?: string | null
           id?: string
           invite_token?: string | null
@@ -194,6 +198,8 @@ export type Database = {
           commission_rate?: number | null
           company_id?: string | null
           created_at?: string
+          credit_card_fee_percent?: number | null
+          debit_card_fee_percent?: number | null
           email?: string | null
           id?: string
           invite_token?: string | null
@@ -1096,6 +1102,8 @@ export type Database = {
           commission_rate: number | null
           company_id: string | null
           created_at: string
+          credit_card_fee_percent: number | null
+          debit_card_fee_percent: number | null
           email: string | null
           id: string
           invite_token: string | null

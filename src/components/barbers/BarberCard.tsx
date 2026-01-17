@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Barber } from "@/hooks/useBarbers";
-import { Pencil, Trash2, Phone, Percent, Building2, Mail, CheckCircle2, Clock, Link2, Copy, Loader2 } from "lucide-react";
+import { Pencil, Trash2, Phone, Percent, Building2, Mail, CheckCircle2, Clock, Link2, Copy, Loader2, CreditCard } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -117,6 +117,16 @@ export function BarberCard({ barber, onEdit, onDelete, onToggleActive, onGenerat
               </span>
               <span className="text-sm text-muted-foreground">comissão</span>
             </div>
+
+            {/* Custom fees indicator */}
+            {(barber.debit_card_fee_percent != null || barber.credit_card_fee_percent != null) && (
+              <div className="flex items-center gap-1 mt-1">
+                <Badge variant="outline" className="text-xs gap-1">
+                  <CreditCard className="h-3 w-3" />
+                  Taxas personalizadas
+                </Badge>
+              </div>
+            )}
 
             {/* Invite link button - only show if no user_id (not yet registered) */}
             {!hasAccount && onGenerateInvite && (

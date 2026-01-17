@@ -21,7 +21,8 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { AvatarUpload } from "@/components/ui/avatar-upload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Building2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { User, Building2, CreditCard } from "lucide-react";
 import { Barber } from "@/hooks/useBarbers";
 import { Unit } from "@/hooks/useUnits";
 
@@ -39,6 +40,9 @@ const barberSchema = z.object({
   commission_rate: z.number().min(0).max(100),
   is_active: z.boolean(),
   unit_id: z.string().optional(),
+  use_custom_fees: z.boolean(),
+  debit_card_fee_percent: z.number().min(0).max(100).optional().nullable(),
+  credit_card_fee_percent: z.number().min(0).max(100).optional().nullable(),
 });
 
 type BarberFormValues = z.infer<typeof barberSchema>;
@@ -73,6 +77,9 @@ export function BarberFormModal({
       commission_rate: 50,
       is_active: true,
       unit_id: "",
+      use_custom_fees: false,
+      debit_card_fee_percent: null,
+      credit_card_fee_percent: null,
     },
   });
 
@@ -80,10 +87,12 @@ export function BarberFormModal({
   
   const isEditMode = !!barber;
   const showUnitSelector = !isEditMode && units.length > 1;
+  const useCustomFees = form.watch("use_custom_fees");
 
   // Reset form when modal opens/closes or barber changes
   useEffect(() => {
     if (open) {
+      const hasCustomFees = barber?.debit_card_fee_percent != null || barber?.credit_card_fee_percent != null;
       form.reset({
         name: barber?.name || "",
         phone: barber?.phone || "",
@@ -93,13 +102,21 @@ export function BarberFormModal({
         commission_rate: barber?.commission_rate || 50,
         is_active: barber?.is_active ?? true,
         unit_id: barber?.unit_id || defaultUnitId || (units.length === 1 ? units[0]?.id : ""),
+        use_custom_fees: hasCustomFees,
+        debit_card_fee_percent: barber?.debit_card_fee_percent ?? null,
+        credit_card_fee_percent: barber?.credit_card_fee_percent ?? null,
       });
       setSelectedColor(barber?.calendar_color || "#FF6B00");
     }
   }, [open, barber, form, defaultUnitId, units]);
 
   const handleSubmit = (data: BarberFormValues) => {
-    onSubmit(data);
+    const submitData = {
+      ...data,
+      debit_card_fee_percent: data.use_custom_fees ? data.debit_card_fee_percent : null,
+      credit_card_fee_percent: data.use_custom_fees ? data.credit_card_fee_percent : null,
+    };
+    onSubmit(submitData);
     form.reset();
   };
 
@@ -272,6 +289,79 @@ export function BarberFormModal({
                 </FormItem>
               )}
             />
+
+            {/* Custom Card Fees Section */}
+            <div className="border border-border rounded-lg p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Taxas de Cartão Personalizadas</span>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="use_custom_fees"
+                  render={({ field }) => (
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+              </div>
+              
+              {useCustomFees && (
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="debit_card_fee_percent"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Taxa Débito (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            placeholder="1.50"
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="credit_card_fee_percent"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs">Taxa Crédito (%)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            max="100"
+                            placeholder="3.00"
+                            value={field.value ?? ""}
+                            onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : null)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
+              
+              {!useCustomFees && (
+                <p className="text-xs text-muted-foreground">
+                  Usando taxas globais definidas em Configurações → Taxas Financeiras
+                </p>
+              )}
+            </div>
 
             <div className="flex justify-end gap-2 pt-4">
               <Button

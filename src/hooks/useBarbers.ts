@@ -17,6 +17,8 @@ export interface Barber {
   created_at: string;
   unit_name?: string;
   invite_token?: string | null;
+  debit_card_fee_percent?: number | null;
+  credit_card_fee_percent?: number | null;
 }
 
 export type BarberFormData = Omit<Barber, "id" | "created_at" | "company_id" | "unit_name"> & {
@@ -87,7 +89,9 @@ export function useBarbers(unitId: string | null | undefined) {
           commission_rate: barber.commission_rate,
           is_active: barber.is_active,
           unit_id: targetUnitId,
-          company_id: unit?.company_id || null
+          company_id: unit?.company_id || null,
+          debit_card_fee_percent: barber.debit_card_fee_percent ?? null,
+          credit_card_fee_percent: barber.credit_card_fee_percent ?? null,
         })
         .select()
         .single();
@@ -153,6 +157,8 @@ export function useBarbers(unitId: string | null | undefined) {
         calendar_color: barber.calendar_color,
         commission_rate: barber.commission_rate,
         is_active: barber.is_active,
+        debit_card_fee_percent: barber.debit_card_fee_percent ?? null,
+        credit_card_fee_percent: barber.credit_card_fee_percent ?? null,
       };
 
       // Only update email if barber doesn't have an associated user account
