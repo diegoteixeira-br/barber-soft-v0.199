@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { DollarSign, Calendar, TrendingUp, Users, Zap, Banknote, Smartphone, CreditCard } from "lucide-react";
+import { DollarSign, Calendar, TrendingUp, Users, Zap, Banknote, Smartphone, CreditCard, Gift } from "lucide-react";
 import { useFinancialData, getDateRanges } from "@/hooks/useFinancialData";
 import { RevenueCard } from "./RevenueCard";
 import { TransactionsTable } from "./TransactionsTable";
@@ -76,6 +76,7 @@ export function CashFlowTab() {
       pix: { total: 0, count: 0 },
       debit_card: { total: 0, count: 0 },
       credit_card: { total: 0, count: 0 },
+      courtesy: { total: 0, count: 0 },
     };
 
     filteredAppointments.forEach((apt) => {
@@ -94,6 +95,7 @@ export function CashFlowTab() {
     { key: "pix" as const, label: "PIX", icon: Smartphone, color: "text-blue-500", bg: "bg-blue-500/10" },
     { key: "debit_card" as const, label: "Débito", icon: CreditCard, color: "text-orange-500", bg: "bg-orange-500/10" },
     { key: "credit_card" as const, label: "Crédito", icon: CreditCard, color: "text-purple-500", bg: "bg-purple-500/10" },
+    { key: "courtesy" as const, label: "Cortesia", icon: Gift, color: "text-pink-500", bg: "bg-pink-500/10" },
   ];
 
   return (

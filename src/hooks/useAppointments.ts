@@ -358,6 +358,11 @@ export function useAppointments(startDate?: Date, endDate?: Date, barberId?: str
       // Add payment_method when completing
       if (status === "completed" && paymentMethod) {
         updateData.payment_method = paymentMethod;
+        
+        // If courtesy, set total_price to 0
+        if (paymentMethod === "courtesy") {
+          updateData.total_price = 0;
+        }
       }
 
       const { data, error } = await supabase

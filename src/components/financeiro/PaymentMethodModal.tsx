@@ -7,10 +7,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Banknote, Smartphone, CreditCard } from "lucide-react";
+import { Banknote, Smartphone, CreditCard, Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type PaymentMethod = "cash" | "pix" | "debit_card" | "credit_card";
+export type PaymentMethod = "cash" | "pix" | "debit_card" | "credit_card" | "courtesy";
 
 interface PaymentMethodModalProps {
   open: boolean;
@@ -25,6 +25,7 @@ const paymentMethods: { value: PaymentMethod; label: string; icon: React.Element
   { value: "pix", label: "PIX", icon: Smartphone, color: "text-blue-500 bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20" },
   { value: "debit_card", label: "Débito", icon: CreditCard, color: "text-orange-500 bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20" },
   { value: "credit_card", label: "Crédito", icon: CreditCard, color: "text-purple-500 bg-purple-500/10 border-purple-500/30 hover:bg-purple-500/20" },
+  { value: "courtesy", label: "Cortesia", icon: Gift, color: "text-pink-500 bg-pink-500/10 border-pink-500/30 hover:bg-pink-500/20" },
 ];
 
 export function PaymentMethodModal({
@@ -74,7 +75,12 @@ export function PaymentMethodModal({
           {/* Valor */}
           <div className="rounded-lg bg-muted/50 p-4 text-center">
             <p className="text-sm text-muted-foreground">Valor a receber</p>
-            <p className="text-2xl font-bold text-foreground">{formatCurrency(totalPrice)}</p>
+            <p className="text-2xl font-bold text-foreground">
+              {selectedMethod === "courtesy" ? formatCurrency(0) : formatCurrency(totalPrice)}
+            </p>
+            {selectedMethod === "courtesy" && (
+              <p className="text-xs text-pink-500 mt-1">Serviço oferecido como cortesia</p>
+            )}
           </div>
 
           {/* Payment Methods Grid */}
@@ -134,6 +140,7 @@ export function PaymentBadge({ method }: { method: string | null }) {
     pix: { label: "PIX", icon: Smartphone, className: "bg-blue-500/10 text-blue-500" },
     debit_card: { label: "Débito", icon: CreditCard, className: "bg-orange-500/10 text-orange-500" },
     credit_card: { label: "Crédito", icon: CreditCard, className: "bg-purple-500/10 text-purple-500" },
+    courtesy: { label: "Cortesia", icon: Gift, className: "bg-pink-500/10 text-pink-500" },
   };
 
   const methodConfig = config[method];

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DollarSign, Wallet, TrendingUp, Banknote, Smartphone, CreditCard, Receipt, Info } from "lucide-react";
+import { DollarSign, Wallet, TrendingUp, Banknote, Smartphone, CreditCard, Receipt, Info, Gift } from "lucide-react";
 import { 
   useFinancialData, 
   getMonthRange, 
@@ -92,6 +92,7 @@ export function CommissionReportTab() {
       pix: { total: 0, cardFee: 0, netValue: 0, commission: 0, count: 0 },
       debit_card: { total: 0, cardFee: 0, netValue: 0, commission: 0, count: 0 },
       credit_card: { total: 0, cardFee: 0, netValue: 0, commission: 0, count: 0 },
+      courtesy: { total: 0, cardFee: 0, netValue: 0, commission: 0, count: 0 },
     };
 
     appointments.forEach((apt) => {
@@ -318,6 +319,16 @@ export function CommissionReportTab() {
             </p>
             <p className="text-xs text-muted-foreground">
               Líq: {formatCurrency(paymentBreakdown.credit_card.netValue)} • Com: {formatCurrency(paymentBreakdown.credit_card.commission)}
+            </p>
+          </div>
+          <div className="p-4 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-2 mb-2">
+              <Gift className="h-4 w-4 text-pink-500" />
+              <span className="text-sm font-medium text-muted-foreground">Cortesia</span>
+            </div>
+            <p className="text-lg font-bold text-foreground">{formatCurrency(paymentBreakdown.courtesy.total)}</p>
+            <p className="text-xs text-muted-foreground">
+              {paymentBreakdown.courtesy.count} atend. • Comissão: {formatCurrency(paymentBreakdown.courtesy.commission)}
             </p>
           </div>
         </div>
