@@ -29,7 +29,7 @@ const plans = [
     annualSavings: 480,
     description: "O mais escolhido pelos nossos clientes",
     features: [
-      "Até 2 Unidades",
+      "Até 1 Unidade",
       "Até 10 Profissionais",
       "Integração WhatsApp",
       "Jackson IA (Atendente Virtual)",
