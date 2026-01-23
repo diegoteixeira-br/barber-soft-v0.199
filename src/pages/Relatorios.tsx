@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUnits } from "@/hooks/useUnits";
@@ -6,6 +6,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Building2, TrendingUp, Calendar, UserPlus } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DateRangePicker } from "@/components/financeiro/DateRangePicker";
+import { startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { ClientDistributionChart } from "@/components/relatorios/ClientDistributionChart";
 import { UnitMetricsTable } from "@/components/relatorios/UnitMetricsTable";
 import { VisitsPerUnitChart } from "@/components/relatorios/VisitsPerUnitChart";
@@ -22,8 +26,38 @@ interface UnitMetrics {
   newClientsThisMonth: number;
 }
 
+type PeriodFilter = "today" | "week" | "month" | "custom";
+
 export default function Relatorios() {
   const { units, isLoading: unitsLoading } = useUnits();
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("month");
+  const [customDateRange, setCustomDateRange] = useState({
+    start: startOfMonth(new Date()),
+    end: endOfMonth(new Date())
+  });
+
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    switch (periodFilter) {
+      case "today":
+        return { start: startOfDay(now), end: endOfDay(now) };
+      case "week":
+        return { start: startOfWeek(now, { locale: ptBR }), end: endOfWeek(now, { locale: ptBR }) };
+      case "custom":
+        return customDateRange;
+      default:
+        return { start: startOfMonth(now), end: endOfMonth(now) };
+    }
+  }, [periodFilter, customDateRange]);
+
+  const periodLabel = useMemo(() => {
+    switch (periodFilter) {
+      case "today": return "Hoje";
+      case "week": return "Esta Semana";
+      case "custom": return "No Período";
+      default: return "Este Mês";
+    }
+  }, [periodFilter]);
 
   const { data: clientsData, isLoading: clientsLoading } = useQuery({
     queryKey: ["all-clients-report"],
@@ -49,9 +83,6 @@ export default function Relatorios() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const currentMonth = new Date().getMonth() + 1;
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
 
     return unitsList.map((unit: { id: string; name: string }) => {
       const unitClients = clients.filter((c: any) => c.unit_id === unit.id);
@@ -72,9 +103,11 @@ export default function Relatorios() {
         return birthMonth === currentMonth;
       }).length;
 
-      const newClientsThisMonth = unitClients.filter((c: any) => {
+      // Novos clientes filtrados pelo período selecionado
+      const newClientsInPeriod = unitClients.filter((c: any) => {
         if (!c.created_at) return false;
-        return new Date(c.created_at) >= startOfMonth;
+        const createdDate = new Date(c.created_at);
+        return isWithinInterval(createdDate, { start: dateRange.start, end: dateRange.end });
       }).length;
 
       const totalVisits = unitClients.reduce((sum: number, c: any) => sum + (c.total_visits || 0), 0);
@@ -87,10 +120,10 @@ export default function Relatorios() {
         activeClients,
         inactiveClients,
         birthdayClients,
-        newClientsThisMonth,
+        newClientsThisMonth: newClientsInPeriod,
       };
     });
-  }, [clientsData]);
+  }, [clientsData, dateRange]);
 
   const totalClients = unitMetrics.reduce((sum, u) => sum + u.totalClients, 0);
   const totalVisits = unitMetrics.reduce((sum, u) => sum + u.totalVisits, 0);
@@ -103,11 +136,32 @@ export default function Relatorios() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Relatórios</h1>
-          <p className="text-muted-foreground">
-            Análise de clientes e métricas por unidade
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Relatórios</h1>
+            <p className="text-muted-foreground">
+              Análise de clientes e métricas por unidade
+            </p>
+          </div>
+          
+          {/* Filtros de período */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Tabs value={periodFilter} onValueChange={(v) => setPeriodFilter(v as PeriodFilter)}>
+              <TabsList className="bg-secondary">
+                <TabsTrigger value="today">Hoje</TabsTrigger>
+                <TabsTrigger value="week">Semana</TabsTrigger>
+                <TabsTrigger value="month">Mês</TabsTrigger>
+                <TabsTrigger value="custom">Personalizado</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            {periodFilter === "custom" && (
+              <DateRangePicker
+                dateRange={customDateRange}
+                onDateRangeChange={setCustomDateRange}
+              />
+            )}
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -178,7 +232,7 @@ export default function Relatorios() {
                   ) : (
                     <p className="text-2xl font-bold text-foreground">{totalNewClients}</p>
                   )}
-                  <p className="text-xs text-muted-foreground">Novos Este Mês</p>
+                  <p className="text-xs text-muted-foreground">Novos {periodLabel}</p>
                 </div>
               </div>
             </CardContent>
@@ -239,7 +293,7 @@ export default function Relatorios() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5 text-primary" />
-              Novos Clientes Este Mês por Unidade
+              Novos Clientes {periodLabel} por Unidade
             </CardTitle>
             <CardDescription>
               Comparativo de captação de novos clientes
