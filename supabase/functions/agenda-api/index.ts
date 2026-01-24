@@ -299,6 +299,21 @@ serve(async (req) => {
   }
 });
 
+// Helper para verificar se um horário está dentro do intervalo do barbeiro
+function isWithinLunchBreak(barber: any, hour: number, minute: number): boolean {
+  if (!barber.lunch_break_enabled || !barber.lunch_break_start || !barber.lunch_break_end) {
+    return false;
+  }
+  
+  const slotMinutes = hour * 60 + minute;
+  const [startHour, startMin] = barber.lunch_break_start.split(":").map(Number);
+  const [endHour, endMin] = barber.lunch_break_end.split(":").map(Number);
+  const lunchStartMinutes = startHour * 60 + (startMin || 0);
+  const lunchEndMinutes = endHour * 60 + (endMin || 0);
+  
+  return slotMinutes >= lunchStartMinutes && slotMinutes < lunchEndMinutes;
+}
+
 // Handler para consultar disponibilidade
 async function handleCheck(supabase: any, body: any, corsHeaders: any) {
   const { date, professional, unit_id, unit_timezone } = body;
@@ -378,10 +393,10 @@ async function handleCheck(supabase: any, body: any, corsHeaders: any) {
 
   console.log(`Today in timezone ${timezone}: ${todayDate}, current time: ${currentHour}:${currentMinute}, requested date: ${dateOnly}, isToday: ${isToday}`);
 
-  // Buscar barbeiros ativos da unidade
+  // Buscar barbeiros ativos da unidade (incluindo config de intervalo)
   let barbersQuery = supabase
     .from('barbers')
-    .select('id, name, calendar_color')
+    .select('id, name, calendar_color, lunch_break_enabled, lunch_break_start, lunch_break_end')
     .eq('unit_id', unit_id)
     .eq('is_active', true);
 
@@ -458,6 +473,9 @@ async function handleCheck(supabase: any, body: any, corsHeaders: any) {
       const slotStart = convertLocalToUTC(slotLocalStr, timezone);
 
       for (const barber of barbers) {
+        // Verificar se está no intervalo do barbeiro
+        const isLunchBreak = isWithinLunchBreak(barber, hour, minute);
+        
         // Verificar se o barbeiro está ocupado neste horário
         const isOccupied = appointments?.some((apt: any) => {
           if (apt.barber_id !== barber.id) return false;
@@ -466,12 +484,14 @@ async function handleCheck(supabase: any, body: any, corsHeaders: any) {
           return slotStart >= aptStart && slotStart < aptEnd;
         });
 
-        if (!isOccupied) {
+        // Só adiciona slot se não estiver ocupado E não for intervalo
+        if (!isOccupied && !isLunchBreak) {
           availableSlots.push({
             time: timeStr,
             datetime: slotStart.toISOString(),
             barber_id: barber.id,
-            barber_name: barber.name
+            barber_name: barber.name,
+            status: "vago"
           });
         }
       }
