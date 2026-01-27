@@ -85,25 +85,20 @@ export function PricingSection() {
           </p>
         </div>
 
-        {/* Banner Flutuante - Aviso de Teste Grátis */}
+        {/* Banner Flutuante - Trial e Garantia */}
         <div className="flex justify-center mb-6 sm:mb-8 px-2">
-          <div className="animate-float bg-gradient-to-r from-green-600 to-emerald-500 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-lg shadow-green-500/30 w-full sm:w-auto">
+          <div className="animate-float bg-gradient-to-r from-gold/90 to-gold text-black px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl shadow-lg shadow-gold/30 w-full sm:w-auto">
             <div className="flex flex-col items-center gap-1">
               <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-center">
-                <span className="text-lg sm:text-xl">🎉</span>
+                <span className="text-lg sm:text-xl">🎁</span>
                 <p className="text-xs sm:text-sm md:text-base font-bold text-center">
-                  PERÍODO DE TESTES — PLANOS AINDA NÃO ESTÃO VALENDO!
+                  7 DIAS GRÁTIS + GARANTIA DE 30 DIAS
                 </p>
-                <span className="text-lg sm:text-xl hidden sm:inline">🎉</span>
+                <span className="text-lg sm:text-xl hidden sm:inline">🎁</span>
               </div>
-              <p className="text-[10px] sm:text-xs md:text-sm opacity-90 text-center">
-                Use a plataforma completa gratuitamente. Sem cartão de crédito, sem compromisso.
+              <p className="text-[10px] sm:text-xs md:text-sm opacity-80 text-center">
+                Teste completo por 7 dias. Não gostou? Dinheiro de volta em até 30 dias.
               </p>
-              <div className="mt-2 px-3 sm:px-4 py-1 bg-white/20 rounded-full">
-                <p className="text-xs sm:text-sm font-bold flex items-center gap-1 sm:gap-2">
-                  🔥 Apenas <span className="text-yellow-300 text-base sm:text-lg">{isLoading ? "..." : remainingSpots}</span> vagas para testadores!
-                </p>
-              </div>
             </div>
           </div>
         </div>
