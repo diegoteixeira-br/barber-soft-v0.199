@@ -221,7 +221,7 @@ export function PricingSection() {
                       ? "bg-gold hover:bg-gold/90 text-black font-semibold"
                       : "bg-muted hover:bg-muted/80"
                   }`}
-                  onClick={() => navigate("/auth?tab=signup")}
+                  onClick={() => navigate(`/auth?tab=signup&plan=${plan.name.toLowerCase()}&billing=${isAnnual ? 'annual' : 'monthly'}`)}
                 >
                   Começar Agora
                 </Button>

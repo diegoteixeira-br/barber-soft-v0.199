@@ -25,6 +25,10 @@ export default function Auth() {
   const [resetEmail, setResetEmail] = useState("");
   
   const defaultTab = searchParams.get("tab") === "signup" ? "signup" : "login";
+  
+  // Get plan parameters from URL
+  const planFromUrl = searchParams.get("plan"); // "inicial", "profissional", "franquias"
+  const billingFromUrl = searchParams.get("billing"); // "monthly", "annual"
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -130,7 +134,7 @@ export default function Auth() {
     try {
       const redirectUrl = `${window.location.origin}/`;
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: signupEmail,
         password: signupPassword,
         options: {
@@ -151,12 +155,50 @@ export default function Auth() {
           description: message,
           variant: "destructive",
         });
-      } else {
+        return;
+      }
+
+      if (data.user) {
         toast({
           title: "Conta criada!",
-          description: "Você já pode fazer login",
+          description: planFromUrl && billingFromUrl 
+            ? "Redirecionando para o checkout..." 
+            : "Escolha seu plano para continuar",
         });
-        navigate("/dashboard");
+
+        // Check if plan was pre-selected (from "Começar Agora" button)
+        if (planFromUrl && billingFromUrl) {
+          // Flow 1: Direct checkout with pre-selected plan
+          try {
+            const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
+              "create-checkout-session",
+              { body: { plan: planFromUrl, billing: billingFromUrl } }
+            );
+
+            if (checkoutError) {
+              console.error("Checkout error:", checkoutError);
+              toast({
+                title: "Erro no checkout",
+                description: "Não foi possível iniciar o checkout. Redirecionando para escolha de plano.",
+                variant: "destructive",
+              });
+              navigate("/escolher-plano");
+              return;
+            }
+
+            if (checkoutData?.url) {
+              window.location.href = checkoutData.url;
+              return;
+            }
+          } catch (checkoutErr) {
+            console.error("Checkout exception:", checkoutErr);
+            navigate("/escolher-plano");
+            return;
+          }
+        } else {
+          // Flow 2: Redirect to plan selection page
+          navigate("/escolher-plano");
+        }
       }
     } finally {
       setIsLoading(false);
@@ -287,6 +329,18 @@ export default function Auth() {
           <h1 className="text-3xl font-bold text-gold group-hover:text-gold/80 transition-colors">BarberSoft</h1>
           <p className="mt-1 text-muted-foreground">Gestão de Barbearias</p>
         </Link>
+
+        {/* Show selected plan info if coming from pricing */}
+        {planFromUrl && billingFromUrl && defaultTab === "signup" && (
+          <div className="mb-4 p-3 rounded-lg bg-gold/10 border border-gold/30 text-center">
+            <p className="text-sm text-foreground">
+              Plano selecionado: <span className="font-semibold capitalize">{planFromUrl}</span> ({billingFromUrl === "annual" ? "Anual" : "Mensal"})
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              7 dias grátis, depois será cobrado automaticamente
+            </p>
+          </div>
+        )}
 
         <Card className="border-border bg-card">
           <Tabs defaultValue={defaultTab} className="w-full">
@@ -443,10 +497,10 @@ export default function Auth() {
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Criando conta...
+                        {planFromUrl ? "Criando conta e redirecionando..." : "Criando conta..."}
                       </>
                     ) : (
-                      "Criar Conta"
+                      planFromUrl ? "Criar Conta e Iniciar Trial" : "Criar Conta"
                     )}
                   </Button>
                 </form>

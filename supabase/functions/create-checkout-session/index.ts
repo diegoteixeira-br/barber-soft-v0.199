@@ -122,7 +122,7 @@ serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://barbersoft.lovable.app";
 
-    // Create checkout session
+    // Create checkout session with 7-day trial
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
@@ -133,13 +133,14 @@ serve(async (req) => {
       ],
       mode: "subscription",
       success_url: `${origin}/dashboard?checkout=success`,
-      cancel_url: `${origin}/dashboard?checkout=cancelled`,
+      cancel_url: `${origin}/escolher-plano?checkout=cancelled`,
       metadata: {
         company_id: company.id,
         plan: plan,
         billing: billing
       },
       subscription_data: {
+        trial_period_days: 7,
         metadata: {
           company_id: company.id,
           plan: plan,
