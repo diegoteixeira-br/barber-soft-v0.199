@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { 
   Crown, 
   CreditCard, 
@@ -20,7 +21,9 @@ import {
   Loader2,
   Zap,
   Building2,
-  Users
+  Users,
+  Infinity,
+  Shield
 } from "lucide-react";
 import {
   AlertDialog,
@@ -64,7 +67,10 @@ const planDetails = {
   },
 };
 
-const getStatusBadge = (status: string | null) => {
+const getStatusBadge = (status: string | null, isSuperAdmin: boolean = false) => {
+  if (isSuperAdmin) {
+    return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Vitalício</Badge>;
+  }
   switch (status) {
     case "trial":
       return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Em Trial</Badge>;
@@ -83,11 +89,12 @@ const getStatusBadge = (status: string | null) => {
 
 export default function Assinatura() {
   const { status, isLoading, openCustomerPortal, startCheckout, isTrialing, isPartner, daysRemaining } = useSubscription();
+  const { isSuperAdmin, isLoading: isSuperAdminLoading } = useSuperAdmin();
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [isUpgrading, setIsUpgrading] = useState<string | null>(null);
 
   const currentPlan = status?.plan_type ? planDetails[status.plan_type] : null;
-  const PlanIcon = currentPlan?.icon || Crown;
+  const PlanIcon = isSuperAdmin ? Shield : (currentPlan?.icon || Crown);
 
   const handleOpenPortal = async () => {
     setIsPortalLoading(true);
@@ -105,7 +112,7 @@ export default function Assinatura() {
     ? ((7 - daysRemaining) / 7) * 100 
     : 0;
 
-  if (isLoading) {
+  if (isLoading || isSuperAdminLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -124,8 +131,27 @@ export default function Assinatura() {
           <p className="text-muted-foreground">Gerencie seu plano e informações de pagamento</p>
         </div>
 
+        {/* Super Admin Lifetime Access */}
+        {isSuperAdmin && (
+          <Card className="border-purple-500/30 bg-purple-500/5">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-full bg-purple-500/20">
+                  <Infinity className="h-6 w-6 text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-purple-400">Acesso Vitalício</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Como Super Admin, você tem acesso ilimitado e vitalício a todas as funcionalidades da plataforma.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Trial Alert */}
-        {isTrialing && daysRemaining !== null && (
+        {!isSuperAdmin && isTrialing && daysRemaining !== null && (
           <Card className="border-blue-500/30 bg-blue-500/5">
             <CardContent className="pt-6">
               <div className="flex items-start gap-4">
@@ -157,7 +183,7 @@ export default function Assinatura() {
         )}
 
         {/* Partner Status */}
-        {isPartner && (
+        {!isSuperAdmin && isPartner && (
           <Card className="border-gold/30 bg-gold/5">
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -181,15 +207,57 @@ export default function Assinatura() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <PlanIcon className={`h-5 w-5 ${currentPlan?.color || 'text-gold'}`} />
+                  <PlanIcon className={`h-5 w-5 ${isSuperAdmin ? 'text-purple-500' : (currentPlan?.color || 'text-gold')}`} />
                   Plano Atual
                 </CardTitle>
-                {getStatusBadge(status?.plan_status)}
+                {getStatusBadge(status?.plan_status, isSuperAdmin)}
               </div>
               <CardDescription>Detalhes da sua assinatura</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {currentPlan ? (
+              {isSuperAdmin ? (
+                <>
+                  <div className="p-4 rounded-lg bg-purple-500/10">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold text-purple-400">
+                          Super Admin
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Acesso Vitalício
+                        </p>
+                      </div>
+                      <Shield className="h-10 w-10 text-purple-400 opacity-50" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Recursos inclusos:</p>
+                    <ul className="space-y-1">
+                      <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        Todas as funcionalidades
+                      </li>
+                      <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        Unidades ilimitadas
+                      </li>
+                      <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        Profissionais ilimitados
+                      </li>
+                      <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        Painel administrativo
+                      </li>
+                      <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        Sem cobrança
+                      </li>
+                    </ul>
+                  </div>
+                </>
+              ) : currentPlan ? (
                 <>
                   <div className={`p-4 rounded-lg ${currentPlan.bgColor}`}>
                     <div className="flex items-center justify-between">
@@ -229,49 +297,50 @@ export default function Assinatura() {
             </CardContent>
           </Card>
 
-          {/* Billing & Actions Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
-                Faturamento
-              </CardTitle>
-              <CardDescription>Gerencie pagamentos e faturas</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                variant="outline" 
-                className="w-full justify-between"
-                onClick={handleOpenPortal}
-                disabled={isPortalLoading || !currentPlan}
-              >
-                <span className="flex items-center gap-2">
-                  {isPortalLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CreditCard className="h-4 w-4" />
-                  )}
-                  Gerenciar Método de Pagamento
-                </span>
-                <ExternalLink className="h-4 w-4" />
-              </Button>
+          {/* Billing & Actions Card - Hidden for Super Admin */}
+          {!isSuperAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Faturamento
+                </CardTitle>
+                <CardDescription>Gerencie pagamentos e faturas</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-between"
+                  onClick={handleOpenPortal}
+                  disabled={isPortalLoading || !currentPlan}
+                >
+                  <span className="flex items-center gap-2">
+                    {isPortalLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4" />
+                    )}
+                    Gerenciar Método de Pagamento
+                  </span>
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
 
-              <Button 
-                variant="outline" 
-                className="w-full justify-between"
-                onClick={handleOpenPortal}
-                disabled={isPortalLoading || !currentPlan}
-              >
-                <span className="flex items-center gap-2">
-                  {isPortalLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Calendar className="h-4 w-4" />
-                  )}
-                  Ver Histórico de Faturas
-                </span>
-                <ExternalLink className="h-4 w-4" />
-              </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-between"
+                  onClick={handleOpenPortal}
+                  disabled={isPortalLoading || !currentPlan}
+                >
+                  <span className="flex items-center gap-2">
+                    {isPortalLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Calendar className="h-4 w-4" />
+                    )}
+                    Ver Histórico de Faturas
+                  </span>
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
 
               <Separator />
 
@@ -370,6 +439,7 @@ export default function Assinatura() {
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
 
         {/* Money-back Guarantee */}
