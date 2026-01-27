@@ -1,209 +1,68 @@
 
-# Plano Revisado: Sistema de Cadastro com Fluxos Diferenciados
+# Plano: Simplificar Acesso à Integração do WhatsApp
 
-## Visao Geral
+## Problema Atual
+1. A aba "Integração" nas Configurações apenas redireciona para Unidades - é uma etapa desnecessária
+2. O botão "Configurar WhatsApp" está escondido em um menu dropdown (3 pontinhos) no card da unidade
+3. O usuário precisa navegar por vários cliques para chegar à configuração
 
-Implementar dois fluxos distintos de conversao:
+## Solução Proposta
 
-1. **"Comecar Agora"** (nos cards de plano) → Cadastro + Checkout imediato com cartao
-2. **"Testar Gratis Agora"** (hero/CTAs genericos) → Cadastro sem cartao, escolhe plano depois
+### 1. Remover a aba "Integração" das Configurações
+- Remover completamente a aba "Integração" pois é redundante
+- Reduzir o grid de 9 para 8 colunas
+- Resultado: Configurações ficam mais limpas e focadas
 
-## Arquitetura dos Dois Fluxos
+### 2. Melhorar o Card de Unidade
+Adicionar um botão visível direto no card para configurar WhatsApp:
+- Se **desconectado**: Mostrar botão "Conectar WhatsApp" diretamente no card (cor verde, chamativo)
+- Se **conectado**: Mostrar badge verde de "Conectado" que também é clicável
 
-### Fluxo 1: "Comecar Agora" em Plano Especifico
+Isso elimina a necessidade de abrir o menu para acessar a configuração mais importante.
 
-```text
-Usuario clica "Comecar Agora" no plano Profissional (anual)
-         ↓
-Redireciona para /auth?tab=signup&plan=profissional&billing=annual
-         ↓
-Formulario de cadastro (nome, email, senha)
-         ↓
-Apos criar conta, redireciona automaticamente para Stripe Checkout
-(com trial de 7 dias + cadastro de cartao)
-         ↓
-Retorna ao /dashboard com assinatura ativa (trial)
-```
+### 3. Manter opção no menu dropdown
+- Manter "Configurar WhatsApp" no menu para consistência
+- Usuários que preferirem o menu ainda terão a opção
 
-### Fluxo 2: "Testar Gratis Agora" (Generico)
+## Arquivos a Modificar
 
-```text
-Usuario clica "Testar Gratis Agora" no hero
-         ↓
-Redireciona para /auth?tab=signup (sem parametros de plano)
-         ↓
-Formulario de cadastro (nome, email, senha)
-         ↓
-Apos criar conta, redireciona para /escolher-plano
-         ↓
-Usuario ve os 3 planos e escolhe qual quer testar
-         ↓
-Clica "Iniciar Trial" → Stripe Checkout (7 dias gratis + cartao)
-         ↓
-Retorna ao /dashboard com assinatura ativa (trial)
-```
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/Configuracoes.tsx` | Remover aba "Integração" |
+| `src/components/units/UnitCard.tsx` | Adicionar botão/badge clicável de WhatsApp no card |
+| `src/components/configuracoes/IntegrationTab.tsx` | Pode ser removido (arquivo não mais utilizado) |
 
-## Diferenca Principal
-
-| Aspecto | "Comecar Agora" | "Testar Gratis" |
-|---------|-----------------|-----------------|
-| Plano pre-definido | Sim | Nao |
-| Passos para checkout | 1 (direto) | 2 (escolha intermediaria) |
-| Friccao | Menor | Maior (mais decisoes) |
-| Conversao esperada | Maior | Para indecisos |
-
-## Alteracoes Necessarias
-
-### 1. Atualizar PricingSection.tsx
-
-Passar o plano e ciclo de faturamento na URL:
-
-```typescript
-// De:
-onClick={() => navigate("/auth?tab=signup")}
-
-// Para:
-onClick={() => navigate(`/auth?tab=signup&plan=${plan.name.toLowerCase()}&billing=${isAnnual ? 'annual' : 'monthly'}`)}
-```
-
-### 2. Atualizar Auth.tsx
-
-Detectar parametros de plano e processar apos signup:
-
-```typescript
-const plan = searchParams.get("plan"); // "inicial", "profissional", "franquias"
-const billing = searchParams.get("billing"); // "monthly", "annual"
-
-// Apos signup bem-sucedido:
-if (plan && billing) {
-  // Redirecionar para checkout com o plano escolhido
-  await supabase.functions.invoke('create-checkout-session', {
-    body: { plan, billing }
-  });
-} else {
-  // Redirecionar para pagina de escolha de plano
-  navigate("/escolher-plano");
-}
-```
-
-### 3. Criar Pagina EscolherPlano.tsx
-
-Nova pagina para usuarios que vieram do "Testar Gratis":
-
-- Mostra os 3 planos com toggle mensal/anual
-- Botao "Iniciar Trial de 7 Dias" em cada plano
-- Apos escolher, vai para Stripe Checkout
-
-### 4. Atualizar create-checkout-session
-
-Adicionar trial de 7 dias:
-
-```typescript
-subscription_data: {
-  trial_period_days: 7,
-  metadata: { company_id, plan, billing }
-}
-```
-
-### 5. Atualizar HeroSection.tsx (Opcional)
-
-Manter texto consistente - o "Testar Gratis" realmente nao pede cartao no inicio, so depois de escolher o plano.
-
-## Componentes a Criar/Modificar
-
-| Arquivo | Acao | Descricao |
-|---------|------|-----------|
-| `src/components/landing/PricingSection.tsx` | Modificar | Passar plan e billing na URL |
-| `src/pages/Auth.tsx` | Modificar | Detectar plano e iniciar checkout automatico |
-| `src/pages/EscolherPlano.tsx` | Criar | Pagina para escolher plano (fluxo generico) |
-| `src/hooks/useSubscription.ts` | Criar | Hook para gerenciar estado de assinatura |
-| `supabase/functions/create-checkout-session/index.ts` | Modificar | Adicionar trial de 7 dias |
-| `src/App.tsx` | Modificar | Adicionar rota /escolher-plano |
-
-## Logica Detalhada do Auth.tsx
-
-```typescript
-const handleSignup = async (e: React.FormEvent) => {
-  // ... validacao existente ...
-  
-  const { data, error } = await supabase.auth.signUp({...});
-  
-  if (!error && data.user) {
-    const plan = searchParams.get("plan");
-    const billing = searchParams.get("billing");
-    
-    if (plan && billing) {
-      // Fluxo "Comecar Agora" - checkout direto
-      setIsLoading(true);
-      const { data: checkoutData } = await supabase.functions.invoke(
-        'create-checkout-session',
-        { body: { plan, billing } }
-      );
-      
-      if (checkoutData?.url) {
-        window.location.href = checkoutData.url;
-      }
-    } else {
-      // Fluxo "Testar Gratis" - escolher plano
-      navigate("/escolher-plano");
-    }
-  }
-};
-```
-
-## Pagina EscolherPlano.tsx (Layout)
+## Visual do Card de Unidade (Após Mudança)
 
 ```text
-+----------------------------------------------------------+
-|                 Escolha seu plano                         |
-|         Todos incluem 7 dias gratis para testar          |
-+----------------------------------------------------------+
-|                                                          |
-|  [Mensal] [Anual -20%]                                   |
-|                                                          |
-|  +----------------+ +----------------+ +----------------+ |
-|  |    Inicial     | |  Profissional  | |   Franquias    | |
-|  |    R$ 99/mes   | |   R$ 199/mes   | |   R$ 499/mes   | |
-|  |                | |  Recomendado   | |                | |
-|  | - 1 Unidade    | | - WhatsApp     | | - Ilimitado    | |
-|  | - 5 Profs      | | - Jackson IA   | | - Multi-loja   | |
-|  |                | | - Marketing    | |                | |
-|  | [Iniciar Trial]| |[Iniciar Trial] | |[Iniciar Trial] | |
-|  +----------------+ +----------------+ +----------------+ |
-|                                                          |
-|  Garantia de 30 dias ou seu dinheiro de volta            |
-+----------------------------------------------------------+
++------------------------------------------+
+|  [icon] Barbearia Principal      [...]  |
+|                                          |
+|  📍 Rua Exemplo, 123                     |
+|  📞 (65) 99999-9999                      |
+|  👤 João Silva                           |
+|                                          |
+|  [ Conectar WhatsApp ]  <-- Botão verde  |
+|       ou                                 |
+|  [✓ WhatsApp Conectado] <-- Badge verde  |
++------------------------------------------+
 ```
 
-## Demais Funcionalidades (Sem Mudanca)
+## Benefícios
+1. Menos cliques para configurar WhatsApp
+2. Interface mais limpa em Configurações
+3. Ação principal (WhatsApp) fica visível e acessível
+4. Mantém compatibilidade com fluxo existente
 
-O restante do plano original permanece:
+## Detalhes Técnicos
 
-- Pagina de Assinatura para gerenciar plano
-- Hook useSubscription
-- Banners de status (trial, overdue, etc)
-- Edge Function delete-account
-- Webhooks para eventos do Stripe
-- Garantia de 30 dias (processo manual)
+### Modificação no UnitCard.tsx
+- Adicionar botão no `CardContent` que aparece baseado no status do WhatsApp
+- Reutilizar o estado `whatsappStatus` que já existe
+- Chamar `onConfigureWhatsApp(unit)` ao clicar
 
-## Ordem de Implementacao
-
-1. Modificar `PricingSection.tsx` - passar plano na URL
-2. Modificar `Auth.tsx` - detectar plano e iniciar checkout
-3. Modificar `create-checkout-session` - adicionar trial 7 dias
-4. Criar `EscolherPlano.tsx` - pagina de escolha de plano
-5. Adicionar rota no `App.tsx`
-6. Criar `useSubscription.ts` hook
-7. Criar pagina `Assinatura.tsx`
-8. Adicionar banners de status
-9. Criar `delete-account` Edge Function
-
-## Resumo da Mudanca Principal
-
-A mudanca chave e que:
-
-- **"Comecar Agora"** no card do plano passa `?plan=X&billing=Y` na URL
-- **Auth.tsx** detecta esses parametros e vai direto pro Stripe apos cadastro
-- **"Testar Gratis"** (hero) vai para Auth sem parametros, depois redireciona para `/escolher-plano`
-
-Isso elimina a friccao para quem ja sabe qual plano quer, enquanto ainda oferece flexibilidade para quem quer testar primeiro.
+### Modificação no Configuracoes.tsx
+- Remover import do `IntegrationTab`
+- Remover `Link2` dos imports
+- Remover TabsTrigger e TabsContent da aba "integration"
+- Ajustar grid de `grid-cols-9` para `grid-cols-8`
