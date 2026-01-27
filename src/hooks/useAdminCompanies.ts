@@ -137,12 +137,39 @@ export function useAdminCompanies() {
     }
   });
 
+  const deleteCompanyMutation = useMutation({
+    mutationFn: async ({ companyId }: { companyId: string }) => {
+      const response = await supabase.functions.invoke("delete-company", {
+        body: { companyId }
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message || "Erro ao excluir empresa");
+      }
+      
+      if (response.data?.error) {
+        throw new Error(response.data.error);
+      }
+      
+      return response.data;
+    },
+    onSuccess: () => {
+      toast.success("Empresa excluída com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["admin-companies"] });
+    },
+    onError: (error) => {
+      toast.error("Erro ao excluir empresa: " + error.message);
+    }
+  });
+
   return {
     companies: companiesQuery.data || [],
     isLoading: companiesQuery.isLoading,
     error: companiesQuery.error,
     blockCompany: blockCompanyMutation.mutate,
     extendTrial: extendTrialMutation.mutate,
-    updatePlan: updatePlanMutation.mutate
+    updatePlan: updatePlanMutation.mutate,
+    deleteCompany: deleteCompanyMutation.mutate,
+    isDeletingCompany: deleteCompanyMutation.isPending
   };
 }

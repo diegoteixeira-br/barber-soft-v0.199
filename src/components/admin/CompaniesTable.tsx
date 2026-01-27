@@ -10,6 +10,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -18,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { AdminCompany, useAdminCompanies } from "@/hooks/useAdminCompanies";
-import { MoreHorizontal, Search, Ban, CheckCircle, Clock, Eye, Trash2 } from "lucide-react";
+import { MoreHorizontal, Search, Ban, CheckCircle, Clock, Eye, Trash2, UserX } from "lucide-react";
 import { formatDistanceToNow, format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CompanyDetailsModal } from "./CompanyDetailsModal";
@@ -37,9 +47,10 @@ const planColors: Record<string, string> = {
 };
 
 export function CompaniesTable() {
-  const { companies, isLoading, blockCompany, extendTrial, updatePlan } = useAdminCompanies();
+  const { companies, isLoading, blockCompany, extendTrial, updatePlan, deleteCompany, isDeletingCompany } = useAdminCompanies();
   const [search, setSearch] = useState("");
   const [selectedCompany, setSelectedCompany] = useState<AdminCompany | null>(null);
+  const [companyToDelete, setCompanyToDelete] = useState<AdminCompany | null>(null);
 
   const filteredCompanies = companies.filter(company => {
     const displayName = company.business_name || company.name;
@@ -185,6 +196,15 @@ export function CompaniesTable() {
                           <Trash2 className="mr-2 h-4 w-4" />
                           Cancelar Assinatura
                         </DropdownMenuItem>
+                        {company.plan_status === 'cancelled' && (
+                          <DropdownMenuItem 
+                            className="text-red-400 focus:text-red-300 focus:bg-slate-700"
+                            onClick={() => setCompanyToDelete(company)}
+                          >
+                            <UserX className="mr-2 h-4 w-4" />
+                            Excluir Permanentemente
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -207,6 +227,42 @@ export function CompaniesTable() {
         open={!!selectedCompany} 
         onOpenChange={(open) => !open && setSelectedCompany(null)} 
       />
+
+      <AlertDialog open={!!companyToDelete} onOpenChange={(open) => !open && setCompanyToDelete(null)}>
+        <AlertDialogContent className="bg-slate-800 border-slate-700">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">Excluir Empresa Permanentemente</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Esta ação é <span className="text-red-400 font-semibold">irreversível</span>. 
+              Todos os dados da empresa <span className="text-white font-medium">{companyToDelete?.business_name || companyToDelete?.name}</span> serão 
+              excluídos permanentemente, incluindo:
+              <ul className="list-disc ml-6 mt-2 space-y-1">
+                <li>Todas as unidades e profissionais</li>
+                <li>Todos os clientes e agendamentos</li>
+                <li>Todo o histórico financeiro</li>
+                <li>A conta do usuário proprietário</li>
+              </ul>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-slate-700 text-slate-300 border-slate-600 hover:bg-slate-600">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 text-white hover:bg-red-700"
+              disabled={isDeletingCompany}
+              onClick={() => {
+                if (companyToDelete) {
+                  deleteCompany({ companyId: companyToDelete.id });
+                  setCompanyToDelete(null);
+                }
+              }}
+            >
+              {isDeletingCompany ? "Excluindo..." : "Excluir Permanentemente"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
