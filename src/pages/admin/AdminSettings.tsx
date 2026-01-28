@@ -1,5 +1,4 @@
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { StripeSettingsCard } from "@/components/admin/StripeSettingsCard";
 import { PlanPricingCard } from "@/components/admin/PlanPricingCard";
 import { PlanFeaturesCard } from "@/components/admin/PlanFeaturesCard";
 import { TrackingPixelsCard } from "@/components/admin/TrackingPixelsCard";
@@ -14,10 +13,7 @@ export default function AdminSettings() {
           <p className="text-slate-400">Configurações globais do SaaS</p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <StripeSettingsCard />
-          <PlanPricingCard />
-        </div>
+        <PlanPricingCard />
         
         <PlanFeaturesCard />
         
