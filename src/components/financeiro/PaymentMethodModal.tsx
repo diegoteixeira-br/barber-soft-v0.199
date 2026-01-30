@@ -21,6 +21,9 @@ interface PaymentMethodModalProps {
   isLoading?: boolean;
   availableCourtesies?: number;
   onUseFidelityCourtesy?: () => void;
+  isFreeCut?: boolean; // New prop to indicate this is the free cut (6th)
+  loyaltyCuts?: number; // Current loyalty cuts count
+  loyaltyThreshold?: number; // Threshold for free cut
 }
 
 const paymentMethods: { value: PaymentMethod; label: string; icon: React.ElementType; color: string }[] = [
@@ -39,6 +42,9 @@ export function PaymentMethodModal({
   isLoading,
   availableCourtesies = 0,
   onUseFidelityCourtesy,
+  isFreeCut = false,
+  loyaltyCuts = 0,
+  loyaltyThreshold = 5,
 }: PaymentMethodModalProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [courtesyReason, setCourtesyReason] = useState("");
@@ -86,14 +92,30 @@ export function PaymentMethodModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Fidelity Courtesy Option */}
-          {availableCourtesies > 0 && (
+          {/* FREE CUT Alert - Show prominently when it's the loyalty free cut */}
+          {isFreeCut && (
+            <div className="rounded-lg border-2 border-green-500 bg-green-500/10 p-4 text-center animate-pulse">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <Gift className="h-6 w-6 text-green-500" />
+                <span className="text-lg font-bold text-green-500">🎉 CORTE GRÁTIS!</span>
+                <Gift className="h-6 w-6 text-green-500" />
+              </div>
+              <p className="text-sm text-green-400">
+                {loyaltyThreshold} cortes pagos! Este é o {loyaltyThreshold + 1}º corte - CORTESIA!
+              </p>
+            </div>
+          )}
+
+          {/* Fidelity Courtesy Option - Show when client has courtesy OR when it's free cut */}
+          {(availableCourtesies > 0 || isFreeCut) && (
             <button
               type="button"
               onClick={() => setSelectedMethod("fidelity_courtesy")}
               className={cn(
                 "w-full flex items-center gap-3 rounded-lg border-2 p-4 transition-all",
-                "bg-green-500/10 border-green-500/30 hover:bg-green-500/20",
+                isFreeCut 
+                  ? "bg-green-500/20 border-green-500 hover:bg-green-500/30 animate-pulse" 
+                  : "bg-green-500/10 border-green-500/30 hover:bg-green-500/20",
                 selectedMethod === "fidelity_courtesy" && "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
               )}
             >
@@ -101,9 +123,14 @@ export function PaymentMethodModal({
                 <Gift className="h-6 w-6 text-green-500" />
               </div>
               <div className="text-left flex-1">
-                <p className="font-semibold text-green-400">Usar Cortesia de Fidelidade</p>
+                <p className="font-semibold text-green-400">
+                  {isFreeCut ? "✨ Usar Cortesia de Fidelidade ✨" : "Usar Cortesia de Fidelidade"}
+                </p>
                 <p className="text-xs text-green-400/70">
-                  {availableCourtesies} cortesia{availableCourtesies > 1 ? "s" : ""} disponível
+                  {isFreeCut 
+                    ? `Prêmio por ${loyaltyThreshold} cortes pagos!`
+                    : `${availableCourtesies} cortesia${availableCourtesies > 1 ? "s" : ""} disponível`
+                  }
                 </p>
               </div>
               <span className="text-green-400 font-bold">GRÁTIS</span>
@@ -120,7 +147,9 @@ export function PaymentMethodModal({
               <p className="text-xs text-pink-500 mt-1">Serviço oferecido como cortesia</p>
             )}
             {isFidelityCourtesy && (
-              <p className="text-xs text-green-500 mt-1">Cortesia de fidelidade</p>
+              <p className="text-xs text-green-500 mt-1">
+                {isFreeCut ? `🎉 Prêmio por ${loyaltyThreshold} cortes pagos!` : "Cortesia de fidelidade"}
+              </p>
             )}
           </div>
 

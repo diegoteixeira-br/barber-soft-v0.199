@@ -42,25 +42,42 @@ export function AppointmentDetailsModal({
   const [isDeleteWithReasonOpen, setIsDeleteWithReasonOpen] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
   const [availableCourtesies, setAvailableCourtesies] = useState(0);
+  const [isFreeCut, setIsFreeCut] = useState(false);
+  const [loyaltyCuts, setLoyaltyCuts] = useState(0);
   const courtesiesBeforeRef = useRef<number>(0);
   
   const { toast } = useToast();
   const { settings } = useBusinessSettings();
-  const { useCourtesy, getClientCourtesies, checkCycleCompletion } = useFidelityCourtesy();
+  const { useCourtesy, getClientCourtesies, checkIfNextCutIsFree, checkCycleCompletion } = useFidelityCourtesy();
   const fidelityEnabled = settings?.fidelity_program_enabled ?? false;
+  const fidelityThreshold = settings?.fidelity_cuts_threshold ?? 5;
 
-  // Fetch client's available courtesies when modal opens
+  // Fetch client's available courtesies and check if this is a free cut
   useEffect(() => {
     if (open && appointment?.client_phone && appointment?.unit_id && fidelityEnabled) {
+      // Get available courtesies
       getClientCourtesies(appointment.client_phone, appointment.unit_id).then((courtesies) => {
         setAvailableCourtesies(courtesies);
         courtesiesBeforeRef.current = courtesies;
       });
+      
+      // Check if this is the free cut (6th cut scenario)
+      checkIfNextCutIsFree(
+        appointment.client_phone,
+        appointment.unit_id,
+        appointment.company_id,
+        appointment.total_price
+      ).then((result) => {
+        setIsFreeCut(result.isFreeCut);
+        setLoyaltyCuts(result.loyaltyCuts);
+      });
     } else {
       setAvailableCourtesies(0);
+      setIsFreeCut(false);
+      setLoyaltyCuts(0);
       courtesiesBeforeRef.current = 0;
     }
-  }, [open, appointment?.client_phone, appointment?.unit_id, fidelityEnabled]);
+  }, [open, appointment?.client_phone, appointment?.unit_id, appointment?.company_id, appointment?.total_price, fidelityEnabled]);
   
   if (!appointment) return null;
 
@@ -302,6 +319,9 @@ export function AppointmentDetailsModal({
         isLoading={isLoading}
         availableCourtesies={fidelityEnabled ? availableCourtesies : 0}
         onUseFidelityCourtesy={handleUseFidelityCourtesy}
+        isFreeCut={fidelityEnabled && isFreeCut}
+        loyaltyCuts={loyaltyCuts}
+        loyaltyThreshold={fidelityThreshold}
       />
 
       {/* Delete with Reason Modal - for confirmed/completed appointments */}
