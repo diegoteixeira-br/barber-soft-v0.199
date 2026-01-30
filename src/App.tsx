@@ -48,6 +48,7 @@ import Privacidade from "./pages/institucional/Privacidade";
 import Termos from "./pages/institucional/Termos";
 import LGPD from "./pages/institucional/LGPD";
 import EscolherPlano from "./pages/EscolherPlano";
+import ResetDeletionPassword from "./pages/ResetDeletionPassword";
 
 const queryClient = new QueryClient();
 
@@ -117,6 +118,7 @@ const App = () => (
             <Route path="/privacidade" element={<Privacidade />} />
             <Route path="/termos" element={<Termos />} />
             <Route path="/lgpd" element={<LGPD />} />
+            <Route path="/reset-deletion-password" element={<ResetDeletionPassword />} />
             
             {/* Protected Routes */}
             <Route path="/*" element={

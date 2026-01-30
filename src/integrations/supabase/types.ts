@@ -372,6 +372,8 @@ export type Database = {
           debit_card_fee_percent: number | null
           deletion_password_enabled: boolean | null
           deletion_password_hash: string | null
+          deletion_password_reset_expires: string | null
+          deletion_password_reset_token: string | null
           fidelity_cuts_threshold: number | null
           fidelity_min_value: number | null
           fidelity_program_enabled: boolean | null
@@ -407,6 +409,8 @@ export type Database = {
           debit_card_fee_percent?: number | null
           deletion_password_enabled?: boolean | null
           deletion_password_hash?: string | null
+          deletion_password_reset_expires?: string | null
+          deletion_password_reset_token?: string | null
           fidelity_cuts_threshold?: number | null
           fidelity_min_value?: number | null
           fidelity_program_enabled?: boolean | null
@@ -442,6 +446,8 @@ export type Database = {
           debit_card_fee_percent?: number | null
           deletion_password_enabled?: boolean | null
           deletion_password_hash?: string | null
+          deletion_password_reset_expires?: string | null
+          deletion_password_reset_token?: string | null
           fidelity_cuts_threshold?: number | null
           fidelity_min_value?: number | null
           fidelity_program_enabled?: boolean | null

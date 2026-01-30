@@ -199,8 +199,24 @@ export function useBusinessSettings() {
     return inputHash === settings.deletion_password_hash;
   };
 
-  // Function to disable deletion password
-  const disableDeletionPassword = async (): Promise<boolean> => {
+  // Function to disable deletion password (requires current password verification)
+  const disableDeletionPassword = async (currentPassword?: string): Promise<boolean> => {
+    // If password is enabled, require verification first
+    if (settings?.deletion_password_enabled && settings?.deletion_password_hash) {
+      if (!currentPassword) {
+        return false;
+      }
+      const isValid = await verifyDeletionPassword(currentPassword);
+      if (!isValid) {
+        toast({
+          title: "Senha incorreta",
+          description: "A senha informada não está correta.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    
     try {
       await updateSettings.mutateAsync({
         deletion_password_enabled: false,
@@ -208,6 +224,84 @@ export function useBusinessSettings() {
       });
       return true;
     } catch (error) {
+      return false;
+    }
+  };
+
+  // Function to change deletion password (requires current password verification)
+  const changeDeletionPassword = async (currentPassword: string, newPassword: string): Promise<boolean> => {
+    // Verify current password first
+    if (settings?.deletion_password_enabled && settings?.deletion_password_hash) {
+      const isValid = await verifyDeletionPassword(currentPassword);
+      if (!isValid) {
+        toast({
+          title: "Senha incorreta",
+          description: "A senha atual não está correta.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+    
+    try {
+      const hash = await hashPassword(newPassword);
+      await updateSettings.mutateAsync({
+        deletion_password_hash: hash,
+        deletion_password_enabled: true,
+      });
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // Function to request password reset via email
+  const requestDeletionPasswordReset = async (): Promise<boolean> => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Erro",
+          description: "Usuário não autenticado.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      const { data, error } = await supabase.functions.invoke("reset-deletion-password", {
+        method: "POST",
+        body: { user_id: user.id },
+      });
+
+      if (error) {
+        toast({
+          title: "Erro ao enviar email",
+          description: error.message,
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      if (data?.error) {
+        toast({
+          title: "Erro",
+          description: data.error,
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      toast({
+        title: "Email enviado!",
+        description: "Verifique sua caixa de entrada para redefinir a senha de exclusão.",
+      });
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar email",
+        description: error.message || "Ocorreu um erro inesperado.",
+        variant: "destructive",
+      });
       return false;
     }
   };
@@ -221,5 +315,7 @@ export function useBusinessSettings() {
     setDeletionPassword,
     verifyDeletionPassword,
     disableDeletionPassword,
+    changeDeletionPassword,
+    requestDeletionPasswordReset,
   };
 }

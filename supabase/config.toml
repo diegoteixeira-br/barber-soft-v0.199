@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.delete-my-account]
 verify_jwt = false
+
+[functions.reset-deletion-password]
+verify_jwt = false

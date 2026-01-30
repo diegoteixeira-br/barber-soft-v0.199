@@ -53,7 +53,14 @@ export function AccountTab() {
   const { toast } = useToast();
   const { isSuperAdmin } = useSuperAdmin();
   const { status, isLoading: subscriptionLoading, openCustomerPortal } = useSubscription();
-  const { settings, setDeletionPassword: saveDeletionPassword, disableDeletionPassword, isLoading: settingsLoading } = useBusinessSettings();
+  const { 
+    settings, 
+    setDeletionPassword: saveDeletionPassword, 
+    disableDeletionPassword, 
+    changeDeletionPassword,
+    requestDeletionPasswordReset,
+    isLoading: settingsLoading 
+  } = useBusinessSettings();
   
   // Security state
   const [email, setEmail] = useState<string | null>(null);
@@ -70,6 +77,13 @@ export function AccountTab() {
   const [deletionPasswordInput, setDeletionPasswordInput] = useState("");
   const [confirmDeletionPassword, setConfirmDeletionPassword] = useState("");
   const [savingDeletionPassword, setSavingDeletionPassword] = useState(false);
+  
+  // Password verification modal state
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordModalAction, setPasswordModalAction] = useState<'disable' | 'change' | null>(null);
+  const [currentPasswordInput, setCurrentPasswordInput] = useState("");
+  const [passwordModalError, setPasswordModalError] = useState(false);
+  const [isRequestingReset, setIsRequestingReset] = useState(false);
   
   // Feedback state
   const [feedbackType, setFeedbackType] = useState<'feedback' | 'bug' | 'suggestion'>('feedback');
@@ -181,6 +195,13 @@ export function AccountTab() {
       return;
     }
 
+    // If already has password, require current password first
+    if (settings?.deletion_password_hash) {
+      setPasswordModalAction('change');
+      setShowPasswordModal(true);
+      return;
+    }
+
     setSavingDeletionPassword(true);
     const success = await saveDeletionPassword(deletionPasswordInput);
     setSavingDeletionPassword(false);
@@ -198,6 +219,13 @@ export function AccountTab() {
 
   const handleToggleDeletionPassword = async (enabled: boolean) => {
     if (!enabled) {
+      // If disabling and password exists, require password confirmation
+      if (settings?.deletion_password_hash) {
+        setPasswordModalAction('disable');
+        setShowPasswordModal(true);
+        return;
+      }
+      
       setSavingDeletionPassword(true);
       const success = await disableDeletionPassword();
       setSavingDeletionPassword(false);
@@ -210,9 +238,60 @@ export function AccountTab() {
         });
       }
     } else {
-      // Just update local state, password will be set when saved
       setDeletionPasswordEnabled(true);
     }
+  };
+
+  const handlePasswordModalConfirm = async () => {
+    if (!currentPasswordInput) {
+      setPasswordModalError(true);
+      return;
+    }
+
+    setSavingDeletionPassword(true);
+    
+    if (passwordModalAction === 'disable') {
+      const success = await disableDeletionPassword(currentPasswordInput);
+      
+      if (success) {
+        setDeletionPasswordEnabled(false);
+        setShowPasswordModal(false);
+        setCurrentPasswordInput("");
+        setPasswordModalError(false);
+        toast({
+          title: "Proteção desativada",
+          description: "A senha de exclusão foi desativada.",
+        });
+      } else {
+        setPasswordModalError(true);
+      }
+    } else if (passwordModalAction === 'change') {
+      const success = await changeDeletionPassword(currentPasswordInput, deletionPasswordInput);
+      
+      if (success) {
+        setShowPasswordModal(false);
+        setCurrentPasswordInput("");
+        setDeletionPasswordInput("");
+        setConfirmDeletionPassword("");
+        setPasswordModalError(false);
+        toast({
+          title: "Senha alterada",
+          description: "A senha de exclusão foi alterada com sucesso.",
+        });
+      } else {
+        setPasswordModalError(true);
+      }
+    }
+    
+    setSavingDeletionPassword(false);
+  };
+
+  const handleRequestPasswordReset = async () => {
+    setIsRequestingReset(true);
+    await requestDeletionPasswordReset();
+    setIsRequestingReset(false);
+    setShowPasswordModal(false);
+    setCurrentPasswordInput("");
   };
 
   const handleDeleteAccount = async () => {
@@ -486,51 +565,183 @@ export function AccountTab() {
           {deletionPasswordEnabled && (
             <>
               <Separator />
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="deletion-password">Nova Senha (4-6 dígitos)</Label>
-                  <Input
-                    id="deletion-password"
-                    type="password"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={6}
-                    value={deletionPasswordInput}
-                    onChange={(e) => setDeletionPasswordInput(e.target.value.replace(/\D/g, ''))}
-                    placeholder="••••••"
-                  />
+              
+              {settings?.deletion_password_hash ? (
+                // Password already configured - show info and change option
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+                    <p className="text-sm text-green-500 flex items-center gap-2">
+                      <Lock className="h-4 w-4" />
+                      Senha de exclusão configurada e ativa
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Para alterar ou desativar, você precisará informar a senha atual.
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="deletion-password">Nova Senha (4-6 dígitos)</Label>
+                      <Input
+                        id="deletion-password"
+                        type="password"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        value={deletionPasswordInput}
+                        onChange={(e) => setDeletionPasswordInput(e.target.value.replace(/\D/g, ''))}
+                        placeholder="••••••"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirm-deletion-password">Confirmar Nova Senha</Label>
+                      <Input
+                        id="confirm-deletion-password"
+                        type="password"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        value={confirmDeletionPassword}
+                        onChange={(e) => setConfirmDeletionPassword(e.target.value.replace(/\D/g, ''))}
+                        placeholder="••••••"
+                      />
+                    </div>
+                    <Button 
+                      onClick={handleSaveDeletionPassword}
+                      disabled={savingDeletionPassword || !deletionPasswordInput || !confirmDeletionPassword}
+                      className="w-full"
+                    >
+                      {savingDeletionPassword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Alterar Senha
+                    </Button>
+                  </div>
+                  
+                  <div className="text-center">
+                    <Button 
+                      variant="link" 
+                      className="text-xs text-muted-foreground hover:text-primary"
+                      onClick={() => {
+                        setPasswordModalAction('disable');
+                        setShowPasswordModal(true);
+                      }}
+                    >
+                      Esqueci minha senha de exclusão
+                    </Button>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-deletion-password">Confirmar Senha</Label>
-                  <Input
-                    id="confirm-deletion-password"
-                    type="password"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={6}
-                    value={confirmDeletionPassword}
-                    onChange={(e) => setConfirmDeletionPassword(e.target.value.replace(/\D/g, ''))}
-                    placeholder="••••••"
-                  />
+              ) : (
+                // No password yet - show setup form
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="deletion-password">Nova Senha (4-6 dígitos)</Label>
+                    <Input
+                      id="deletion-password"
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      value={deletionPasswordInput}
+                      onChange={(e) => setDeletionPasswordInput(e.target.value.replace(/\D/g, ''))}
+                      placeholder="••••••"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-deletion-password">Confirmar Senha</Label>
+                    <Input
+                      id="confirm-deletion-password"
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      value={confirmDeletionPassword}
+                      onChange={(e) => setConfirmDeletionPassword(e.target.value.replace(/\D/g, ''))}
+                      placeholder="••••••"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleSaveDeletionPassword}
+                    disabled={savingDeletionPassword || !deletionPasswordInput || !confirmDeletionPassword}
+                    className="w-full"
+                  >
+                    {savingDeletionPassword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Salvar Senha
+                  </Button>
                 </div>
-                <Button 
-                  onClick={handleSaveDeletionPassword}
-                  disabled={savingDeletionPassword || !deletionPasswordInput || !confirmDeletionPassword}
-                  className="w-full"
-                >
-                  {savingDeletionPassword && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Salvar Senha
-                </Button>
-                {settings?.deletion_password_hash && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    ✓ Senha configurada. Preencha os campos acima para alterar.
-                  </p>
-                )}
-              </div>
+              )}
             </>
           )}
         </CardContent>
       </Card>
+
+      {/* Password Verification Modal */}
+      <AlertDialog open={showPasswordModal} onOpenChange={(open) => {
+        if (!open) {
+          setShowPasswordModal(false);
+          setCurrentPasswordInput("");
+          setPasswordModalError(false);
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirme sua senha de exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Para {passwordModalAction === 'disable' ? 'desativar a proteção' : 'alterar a senha'}, digite sua senha de exclusão atual:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="current-password-modal">Senha atual</Label>
+              <Input
+                id="current-password-modal"
+                type="password"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={currentPasswordInput}
+                onChange={(e) => {
+                  setCurrentPasswordInput(e.target.value.replace(/\D/g, ''));
+                  setPasswordModalError(false);
+                }}
+                placeholder="••••••"
+                className={passwordModalError ? "border-destructive" : ""}
+              />
+              {passwordModalError && (
+                <p className="text-xs text-destructive">Senha incorreta. Tente novamente.</p>
+              )}
+            </div>
+          </div>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+            <Button
+              variant="link"
+              className="text-xs text-muted-foreground hover:text-primary mr-auto"
+              onClick={handleRequestPasswordReset}
+              disabled={isRequestingReset}
+            >
+              {isRequestingReset ? (
+                <>
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                "Esqueci minha senha"
+              )}
+            </Button>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handlePasswordModalConfirm();
+              }}
+              disabled={!currentPasswordInput || savingDeletionPassword}
+            >
+              {savingDeletionPassword ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : null}
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Feedback Card */}
       <Card className="border-border bg-card">
