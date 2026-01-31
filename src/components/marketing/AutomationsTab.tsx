@@ -10,36 +10,82 @@ import { useMarketingSettings } from "@/hooks/useMarketingSettings";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// Mensagens padrão
+const DEFAULT_BIRTHDAY_MESSAGE = `Salve {{nome}}! Hoje o dia é todo seu! 🥳
+
+👏 Passando aqui pra te desejar um feliz aniversário e tudo de melhor. 
+
+Que você continue com essa vibe gente boa de sempre! Sucesso, meu parceiro! 
+
+Quando quiser comemorar com aquele visual na régua, tamos aqui. 🍾✂️ 
+
+Que tal aproveitar e já marcar seu horário? Manda um alô aqui que eu vejo a agenda pra você! 📅
+
+(Se preferir não receber nossos avisos, digite SAIR. Tmj)`;
+
+const DEFAULT_RESCUE_MESSAGE = `E aí {{nome}}, sumido hein! 
+
+👀 Rapaz, a gente tava aqui comentando... faz tempo que você não aparece! 
+
+A cadeira tá sentindo sua falta e a resenha também. 😂 Bora renovar esse visual e colocar o papo em dia? 
+
+O café tá quente e a tesoura tá afiada te esperando. ☕✂️ 
+
+Que tal aproveitar e já marcar seu horário? Manda um alô aqui que eu vejo a agenda pra você! 📅
+
+(Se não quiser receber esses toques, digite SAIR. Sem stress, a amizade continua! até mais👊)`;
+
+const DEFAULT_REMINDER_MESSAGE = `Olá {{nome}}! 👋
+
+Lembrando do seu agendamento para HOJE às {{horario}} com {{profissional}}.
+
+📍 {{servico}}
+
+Aguardamos você! Se precisar remarcar, entre em contato. Tmj 💈`;
+
+// Parte fixa do lembrete - NÃO PODE SER EDITADA
+const FIXED_REMINDER_SUFFIX = `👇 Para o sistema reconhecer, responda apenas:
+
+📌 *CONFIRMADO* para confirmar presença
+
+📌 *CANCELAR* se não puder comparecer`;
+
 export function AutomationsTab() {
   const { settings, isLoading, updateSettings } = useMarketingSettings();
   
   const [birthdayEnabled, setBirthdayEnabled] = useState(false);
-  const [birthdayMessage, setBirthdayMessage] = useState("");
+  const [birthdayMessage, setBirthdayMessage] = useState(DEFAULT_BIRTHDAY_MESSAGE);
   const [rescueEnabled, setRescueEnabled] = useState(false);
   const [rescueDays, setRescueDays] = useState(30);
-  const [rescueMessage, setRescueMessage] = useState("");
+  const [rescueMessage, setRescueMessage] = useState(DEFAULT_RESCUE_MESSAGE);
   const [sendHour, setSendHour] = useState(11);
   const [sendMinute, setSendMinute] = useState(30);
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderMinutes, setReminderMinutes] = useState(30);
-  const [reminderMessage, setReminderMessage] = useState("");
+  const [reminderMessage, setReminderMessage] = useState(DEFAULT_REMINDER_MESSAGE);
 
   useEffect(() => {
     if (settings) {
       setBirthdayEnabled(settings.birthday_automation_enabled ?? false);
-      setBirthdayMessage(settings.birthday_message_template ?? "");
+      setBirthdayMessage(settings.birthday_message_template || DEFAULT_BIRTHDAY_MESSAGE);
       setRescueEnabled(settings.rescue_automation_enabled ?? false);
       setRescueDays(settings.rescue_days_threshold ?? 30);
-      setRescueMessage(settings.rescue_message_template ?? "");
+      setRescueMessage(settings.rescue_message_template || DEFAULT_RESCUE_MESSAGE);
       setSendHour(settings.automation_send_hour ?? 11);
       setSendMinute(settings.automation_send_minute ?? 30);
       setReminderEnabled(settings.appointment_reminder_enabled ?? false);
       setReminderMinutes(settings.appointment_reminder_minutes ?? 30);
-      setReminderMessage(settings.appointment_reminder_template ?? "");
+      // Remove o sufixo fixo se existir no template salvo
+      const savedReminder = settings.appointment_reminder_template || DEFAULT_REMINDER_MESSAGE;
+      const reminderWithoutSuffix = savedReminder.replace(FIXED_REMINDER_SUFFIX, '').trim();
+      setReminderMessage(reminderWithoutSuffix || DEFAULT_REMINDER_MESSAGE);
     }
   }, [settings]);
 
   const handleSave = () => {
+    // Concatena a parte editável com a parte fixa do lembrete
+    const fullReminderTemplate = reminderMessage.trim() + "\n\n" + FIXED_REMINDER_SUFFIX;
+    
     updateSettings.mutate({
       birthday_automation_enabled: birthdayEnabled,
       birthday_message_template: birthdayMessage,
@@ -50,7 +96,7 @@ export function AutomationsTab() {
       automation_send_minute: sendMinute,
       appointment_reminder_enabled: reminderEnabled,
       appointment_reminder_minutes: reminderMinutes,
-      appointment_reminder_template: reminderMessage,
+      appointment_reminder_template: fullReminderTemplate,
     });
   };
 
@@ -153,13 +199,12 @@ export function AutomationsTab() {
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="birthday-message">Mensagem de Parabéns</Label>
-          <Textarea
+            <Textarea
               id="birthday-message"
-              placeholder="Olá {{nome}}! 🎂 Feliz aniversário! A equipe deseja um dia incrível pra você. Venha comemorar conosco! 🎉 Caso não queira receber esses mimos por aqui, digite SAIR."
+              placeholder="Digite sua mensagem de aniversário..."
               value={birthdayMessage}
               onChange={(e) => setBirthdayMessage(e.target.value)}
-              className="mt-2 min-h-[100px]"
-              disabled={!birthdayEnabled}
+              className="mt-2 min-h-[180px]"
             />
             <p className="mt-1 text-xs text-muted-foreground">
               Use <code className="rounded bg-muted px-1">{"{{nome}}"}</code> para inserir o nome do cliente
@@ -209,13 +254,12 @@ export function AutomationsTab() {
 
           <div>
             <Label htmlFor="rescue-message">Mensagem de Resgate</Label>
-          <Textarea
+            <Textarea
               id="rescue-message"
-              placeholder="Olá {{nome}}! Sentimos sua falta! 💈 Já faz um tempo desde sua última visita. Bora dar aquele tapa no visual? Mas ó, se preferir não receber esses toques, é só mandar SAIR. Sem stress, a amizade continua! 🤜"
+              placeholder="Digite sua mensagem de resgate..."
               value={rescueMessage}
               onChange={(e) => setRescueMessage(e.target.value)}
-              className="mt-2 min-h-[100px]"
-              disabled={!rescueEnabled}
+              className="mt-2 min-h-[180px]"
             />
             <p className="mt-1 text-xs text-muted-foreground">
               Use <code className="rounded bg-muted px-1">{"{{nome}}"}</code> para inserir o nome do cliente
@@ -270,23 +314,13 @@ export function AutomationsTab() {
           </div>
 
           <div>
-            <Label htmlFor="reminder-message">Mensagem de Lembrete</Label>
+            <Label htmlFor="reminder-message">Mensagem de Lembrete (Editável)</Label>
             <Textarea
               id="reminder-message"
-              placeholder={`Olá {{nome}}! 👋
-
-Lembrando do seu agendamento para HOJE às {{horario}} com {{profissional}}.
-
-📍 {{servico}}
-
-Aguardamos você! Se precisar remarcar, entre em contato. Tmj 💈
-
-📌 Responda *SIM* para confirmar presença
-📌 Responda *NÃO* se não puder comparecer`}
+              placeholder="Digite sua mensagem de lembrete..."
               value={reminderMessage}
               onChange={(e) => setReminderMessage(e.target.value)}
               className="mt-2 min-h-[140px]"
-              disabled={!reminderEnabled}
             />
             <p className="mt-1 text-xs text-muted-foreground">
               Use: <code className="rounded bg-muted px-1">{"{{nome}}"}</code>, 
@@ -295,8 +329,16 @@ Aguardamos você! Se precisar remarcar, entre em contato. Tmj 💈
               <code className="ml-1 rounded bg-muted px-1">{"{{servico}}"}</code>, 
               <code className="ml-1 rounded bg-muted px-1">{"{{data}}"}</code>
             </p>
-            <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-              💡 <strong>Dica:</strong> Inclua opções de resposta (SIM/NÃO) para que o cliente possa confirmar presença diretamente pelo WhatsApp.
+          </div>
+
+          {/* Fixed suffix - non-editable */}
+          <div>
+            <Label className="text-muted-foreground">Parte Fixa (adicionada automaticamente)</Label>
+            <div className="mt-2 rounded-lg border bg-muted/50 p-4 text-sm text-muted-foreground">
+              <pre className="whitespace-pre-wrap font-sans">{FIXED_REMINDER_SUFFIX}</pre>
+            </div>
+            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
+              ⚠️ Esta parte é fixa e será adicionada automaticamente ao final da mensagem para garantir que o sistema reconheça as respostas.
             </p>
           </div>
 
