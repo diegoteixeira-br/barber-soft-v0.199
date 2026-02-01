@@ -6,7 +6,8 @@ export function useSyncClientFidelity() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  return useMutation({
+  // Sync a single client
+  const syncSingle = useMutation({
     mutationFn: async (clientId: string) => {
       // 1. Get client info and unit fidelity settings
       const { data: client, error: clientError } = await supabase
@@ -34,7 +35,7 @@ export function useSyncClientFidelity() {
       // 2. Count completed appointments that qualify for fidelity
       const { data: appointments, error: apptError } = await supabase
         .from("appointments")
-        .select("id, total_price, payment_method")
+        .select("id, total_price, payment_method, start_time")
         .eq("unit_id", client.unit_id)
         .eq("status", "completed")
         .or(`client_phone.eq.${client.phone},client_name.ilike.${client.name.toLowerCase().trim()}`);
@@ -44,13 +45,18 @@ export function useSyncClientFidelity() {
       // Count cuts - excluding courtesy payments since those redeem the counter
       let loyaltyCuts = 0;
       let totalVisits = 0;
+      let lastVisit: string | null = null;
 
       for (const appt of appointments || []) {
         totalVisits++;
+        if (!lastVisit || appt.start_time > lastVisit) {
+          lastVisit = appt.start_time;
+        }
         // Only count towards fidelity if: meets min value AND not a courtesy payment
         if (
           appt.total_price >= minValue &&
-          appt.payment_method !== "Cortesia de Fidelidade"
+          appt.payment_method !== "Cortesia de Fidelidade" &&
+          appt.payment_method !== "fidelity_courtesy"
         ) {
           loyaltyCuts++;
         }
@@ -61,10 +67,6 @@ export function useSyncClientFidelity() {
       const threshold = unit.fidelity_cuts_threshold || 10;
       const earnedCourtesies = Math.floor(loyaltyCuts / threshold);
       const currentCuts = loyaltyCuts % threshold;
-      
-      // Calculate how many courtesies should be available
-      // (earned - already used based on available_courtesies tracking)
-      const availableCourtesies = client.available_courtesies || 0;
 
       // 3. Update client record
       const { error: updateError } = await supabase
@@ -73,6 +75,7 @@ export function useSyncClientFidelity() {
           loyalty_cuts: currentCuts,
           total_visits: totalVisits,
           total_courtesies_earned: earnedCourtesies,
+          last_visit_at: lastVisit,
           updated_at: new Date().toISOString(),
         })
         .eq("id", clientId);
@@ -101,4 +104,30 @@ export function useSyncClientFidelity() {
       });
     },
   });
+
+  // Sync ALL clients using the database function
+  const syncAll = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("recalculate_all_client_fidelity");
+      if (error) throw error;
+      return data as { processed_clients: number; updated_clients: number }[];
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      const result = data?.[0];
+      toast({
+        title: "Fidelidade sincronizada!",
+        description: `${result?.processed_clients || 0} clientes processados, ${result?.updated_clients || 0} atualizados`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Erro ao sincronizar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  return { syncSingle, syncAll };
 }

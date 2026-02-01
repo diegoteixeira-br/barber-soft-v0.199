@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, Users, Cake, Clock, Plus, Building2, Loader2, BellOff } from "lucide-react";
+import { Search, Users, Cake, Clock, Plus, Building2, Loader2, BellOff, RefreshCw } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { ClientDetailsModal } from "@/components/clients/ClientDetailsModal";
 import { useClients, Client, ClientFilter, CreateClientData } from "@/hooks/useClients";
 import { useUnits } from "@/hooks/useUnits";
 import { useCurrentUnit } from "@/contexts/UnitContext";
+import { useSyncClientFidelity } from "@/hooks/useSyncClientFidelity";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +45,12 @@ export default function Clientes() {
     filter,
     unitIdFilter: effectiveUnitId,
   });
+
+  const { syncAll } = useSyncClientFidelity();
+
+  // Check if current unit has fidelity enabled
+  const currentUnit = units.find(u => u.id === currentUnitId);
+  const fidelityEnabled = currentUnit?.fidelity_program_enabled ?? false;
 
   const filteredClients = useMemo(() => {
     if (!search.trim()) return clients;
@@ -96,10 +104,30 @@ export default function Clientes() {
               Gerencie sua base de clientes e CRM
             </p>
           </div>
-          <Button onClick={() => setIsCreating(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Novo Cliente
-          </Button>
+          <div className="flex gap-2">
+            {fidelityEnabled && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    onClick={() => syncAll.mutate()}
+                    disabled={syncAll.isPending}
+                    className="gap-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${syncAll.isPending ? "animate-spin" : ""}`} />
+                    <span className="hidden sm:inline">Sincronizar Fidelidade</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Recalcular cortes de fidelidade de todos os clientes</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            <Button onClick={() => setIsCreating(true)} className="gap-2">
+              <Plus className="h-4 w-4" />
+              Novo Cliente
+            </Button>
+          </div>
         </div>
 
         {/* Filters Row */}

@@ -149,12 +149,12 @@ export function ClientCard({ client, onEdit, onDelete, onView, showUnit = false 
                   size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
-                    syncFidelity.mutate(client.id);
+                    syncFidelity.syncSingle.mutate(client.id);
                   }}
-                  disabled={syncFidelity.isPending}
+                  disabled={syncFidelity.syncSingle.isPending}
                   className="h-6 w-6 text-muted-foreground hover:text-primary"
                 >
-                  <RefreshCw className={`h-3.5 w-3.5 ${syncFidelity.isPending ? "animate-spin" : ""}`} />
+                  <RefreshCw className={`h-3.5 w-3.5 ${syncFidelity.syncSingle.isPending ? "animate-spin" : ""}`} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
