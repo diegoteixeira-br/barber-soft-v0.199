@@ -236,24 +236,25 @@ export const UnitWhatsAppIntegration = forwardRef<UnitWhatsAppIntegrationRef, Un
 
         {/* Connected State */}
         {connectionState === "open" && (
-          <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-6">
-            <div className="flex items-start gap-4">
+          <div className="space-y-4">
+            {/* Profile Card */}
+            <div className="flex items-center gap-4 rounded-lg border border-border bg-card p-4">
               {/* Profile Picture */}
               {profile?.pictureUrl ? (
                 <img 
                   src={profile.pictureUrl} 
                   alt="WhatsApp" 
-                  className="h-12 w-12 rounded-full object-cover border-2 border-green-500/30"
+                  className="h-16 w-16 rounded-full object-cover border-2 border-green-500/50 shadow-md"
                 />
               ) : (
-                <div className="h-12 w-12 rounded-full bg-green-500/20 flex items-center justify-center border-2 border-green-500/30">
-                  <MessageCircle className="h-6 w-6 text-green-500" />
+                <div className="h-16 w-16 rounded-full bg-green-500/20 flex items-center justify-center border-2 border-green-500/50">
+                  <MessageCircle className="h-8 w-8 text-green-500" />
                 </div>
               )}
               
               {/* Profile Info */}
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground truncate">
+                <p className="font-semibold text-foreground text-lg">
                   {profile?.name || 'WhatsApp conectado'}
                 </p>
                 {profile?.phone && (
@@ -261,29 +262,27 @@ export const UnitWhatsAppIntegration = forwardRef<UnitWhatsAppIntegrationRef, Un
                     {formatPhone(profile.phone)}
                   </p>
                 )}
-                {!profile?.phone && unit.evolution_instance_name && (
-                  <p className="text-xs text-muted-foreground truncate">
-                    {unit.evolution_instance_name}
-                  </p>
-                )}
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-xs text-green-500 font-medium">Online</span>
+                </div>
               </div>
-              
-              {/* Disconnect Button */}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDisconnect}
-                disabled={isLoading}
-                className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10 shrink-0"
-              >
-                {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Unplug className="h-4 w-4" />
-                )}
-                Desconectar
-              </Button>
             </div>
+            
+            {/* Disconnect Button - Full Width */}
+            <Button
+              variant="destructive"
+              onClick={handleDisconnect}
+              disabled={isLoading}
+              className="w-full gap-2"
+            >
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Unplug className="h-4 w-4" />
+              )}
+              Desconectar WhatsApp
+            </Button>
           </div>
         )}
       </div>
