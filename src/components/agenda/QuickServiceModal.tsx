@@ -29,6 +29,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Barber } from "@/hooks/useBarbers";
 import type { Service } from "@/hooks/useServices";
 import { Zap, CalendarClock } from "lucide-react";
@@ -152,7 +153,7 @@ export function QuickServiceModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Zap className="h-5 w-5 text-primary" />
@@ -161,229 +162,233 @@ export function QuickServiceModal({
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="client_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome do Cliente</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome do cliente" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="client_phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Telefone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="(00) 00000-0000" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="client_birth_date"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data de Nascimento</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="barber_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Profissional</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o profissional" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {activeBarbers.map((barber) => (
-                        <SelectItem key={barber.id} value={barber.id}>
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: barber.calendar_color || "#FF6B00" }}
-                            />
-                            {barber.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="service_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Serviço</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o serviço" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {activeServices.map((service) => (
-                        <SelectItem key={service.id} value={service.id}>
-                          {service.name} - R$ {service.price.toFixed(2)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="total_price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor Cobrado (R$)</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* Payment Method - Only show when NOT scheduling for later */}
-            {!scheduleLater && (
-              <FormField
-                control={form.control}
-                name="payment_method"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Forma de Pagamento *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col flex-1 overflow-hidden">
+            <ScrollArea className="flex-1 pr-4">
+              <div className="space-y-4 pb-2">
+                <FormField
+                  control={form.control}
+                  name="client_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome do Cliente</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a forma de pagamento" />
-                        </SelectTrigger>
+                        <Input placeholder="Nome do cliente" {...field} />
                       </FormControl>
-                      <SelectContent>
-                        <SelectItem value="cash">💵 Dinheiro</SelectItem>
-                        <SelectItem value="pix">📱 PIX</SelectItem>
-                        <SelectItem value="debit_card">💳 Débito</SelectItem>
-                        <SelectItem value="credit_card">💳 Crédito</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            {/* Toggle para agendar */}
-            <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="flex items-center gap-3">
-                <CalendarClock className="h-5 w-5 text-muted-foreground" />
-                <div className="space-y-0.5">
-                  <Label htmlFor="schedule-later">Agendar para depois</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Agendar o serviço para uma data e hora específica
-                  </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="client_phone"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Telefone</FormLabel>
+                        <FormControl>
+                          <Input placeholder="(00) 00000-0000" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="client_birth_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Nascimento</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
-              </div>
-              <FormField
-                control={form.control}
-                name="schedule_later"
-                render={({ field }) => (
-                  <Switch
-                    id="schedule-later"
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
+
+                <FormField
+                  control={form.control}
+                  name="barber_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Profissional</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o profissional" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {activeBarbers.map((barber) => (
+                            <SelectItem key={barber.id} value={barber.id}>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: barber.calendar_color || "#FF6B00" }}
+                                />
+                                {barber.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="service_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Serviço</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione o serviço" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {activeServices.map((service) => (
+                            <SelectItem key={service.id} value={service.id}>
+                              {service.name} - R$ {service.price.toFixed(2)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="total_price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Valor Cobrado (R$)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...field}
+                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Payment Method - Only show when NOT scheduling for later */}
+                {!scheduleLater && (
+                  <FormField
+                    control={form.control}
+                    name="payment_method"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Forma de Pagamento *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione a forma de pagamento" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="cash">💵 Dinheiro</SelectItem>
+                            <SelectItem value="pix">📱 PIX</SelectItem>
+                            <SelectItem value="debit_card">💳 Débito</SelectItem>
+                            <SelectItem value="credit_card">💳 Crédito</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 )}
-              />
-            </div>
 
-            {/* Campos de data/hora quando agendar para depois */}
-            {scheduleLater && (
-              <div className="grid grid-cols-2 gap-4">
+                {/* Toggle para agendar */}
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="flex items-center gap-3">
+                    <CalendarClock className="h-5 w-5 text-muted-foreground" />
+                    <div className="space-y-0.5">
+                      <Label htmlFor="schedule-later">Agendar para depois</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Agendar o serviço para uma data e hora específica
+                      </p>
+                    </div>
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="schedule_later"
+                    render={({ field }) => (
+                      <Switch
+                        id="schedule-later"
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    )}
+                  />
+                </div>
+
+                {/* Campos de data/hora quando agendar para depois */}
+                {scheduleLater && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="scheduled_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Data</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="scheduled_time"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Hora</FormLabel>
+                          <FormControl>
+                            <Input type="time" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
                 <FormField
                   control={form.control}
-                  name="scheduled_date"
+                  name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data</FormLabel>
+                      <FormLabel>Observações</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="scheduled_time"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hora</FormLabel>
-                      <FormControl>
-                        <Input type="time" {...field} />
+                        <Textarea
+                          placeholder="Observações sobre o atendimento..."
+                          className="resize-none"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-            )}
+            </ScrollArea>
 
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Observações</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Observações sobre o atendimento..."
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="flex justify-end gap-2 pt-4 border-t mt-4">
               <Button
                 type="button"
                 variant="outline"
